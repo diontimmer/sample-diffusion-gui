@@ -105,9 +105,9 @@ def generate(window, values):
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
     while True:
         line = p.stdout.readline()
-        print(line)
         if not line:
             break
+        print(line, end="")
     p.wait()
     print('Process Finished!')
     window['Generate'].update(disabled=False)
