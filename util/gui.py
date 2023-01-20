@@ -5,6 +5,7 @@ import subprocess
 from cli import parse_cli_args
 import PySimpleGUI as sg
 from threading import Thread
+import re
 
 
 def refresh_models(window):
@@ -70,6 +71,16 @@ def get_args_object():
     return settings
 
 
+def extract_percentage(output):
+    if output:
+        last_percentage = None
+        for match in re.finditer(r'\d+%', output):
+            last_percentage = int(match.group(0).strip('%'))
+        return last_percentage
+    else:
+        return None
+
+
 def generate(window, values):
     window['Generate'].update(disabled=True)
     args = parse_cli_args()
@@ -94,11 +105,9 @@ def generate(window, values):
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
     while True:
         line = p.stdout.readline()
+        print(line)
         if not line:
             break
-        print(line, end="")
-    for line in p.stderr:
-        print(line, end="")
     p.wait()
     print('Process Finished!')
     window['Generate'].update(disabled=False)
