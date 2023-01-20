@@ -1,7 +1,8 @@
 .vscode/
-audio/
-models/
 
+models/*
+output/*
+conda_launch.bat
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 inputs

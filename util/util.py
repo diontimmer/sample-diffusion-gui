@@ -1,6 +1,8 @@
 import os
 import torch
 import torchaudio
+from pydub import AudioSegment
+
 
 def tensor_slerp_2D(a: torch.Tensor, b: torch.Tensor, t: float):
     slerped = torch.empty_like(a)
@@ -31,18 +33,35 @@ def load_audio(device, audio_path: str, sample_rate):
     return audio.to(device)
 
 
-def save_audio(audio_out, output_path: str, sample_rate, id_str:str = None):
+def save_audio(audio_out, output_path: str, sample_rate, id_str:str = None, modelname='Sample'):
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     
     for ix, sample in enumerate(audio_out):
-        output_file = os.path.join(output_path, f"sample_{id_str}_{ix + 1}.wav" if(id_str!=None) else f"sample_{ix + 1}.wav")
+        output_file = os.path.join(output_path, f"{modelname}_{id_str}_{ix + 1}.wav" if(id_str!=None) else f"sample_{ix + 1}.wav")
         open(output_file, "a").close()
         
         output = sample.cpu()
 
         torchaudio.save(output_file, output, sample_rate)
+
+        # silence trim
+        sound = AudioSegment.from_file(output_file)
+        start_trim = detect_leading_silence(sound)
+        end_trim = detect_leading_silence(sound.reverse())
+        duration = len(sound)
+        trimmed_sound = sound[start_trim:duration - end_trim]
+        trimmed_sound.export(output_file, format="wav")     
+
+
+def detect_leading_silence(sound, silence_threshold=-50.0, chunk_size=1):
+    trim_ms = 0
+    assert chunk_size > 0
+    while sound[trim_ms:trim_ms+chunk_size].dBFS < silence_threshold and trim_ms < len(sound):
+        trim_ms += chunk_size
+
+    return trim_ms
 
 
 def cropper(samples: int, randomize: bool = True):

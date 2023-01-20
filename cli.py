@@ -49,7 +49,7 @@ def main():
     )
     
     response = request_handler.process_request(request)#, lambda **kwargs: print(f"{kwargs['step'] / kwargs['x']}"))
-    save_audio((0.5 * response.result).clamp(-1,1) if(args.tame == True) else response.result, f"audio/Output/{ModelType.DD.__str__()}/{args.mode.__str__()}/", args.sample_rate, f"{seed}")
+    save_audio((0.5 * response.result).clamp(-1,1) if(args.tame == True) else response.result, f"{args.output_path.__str__()}/{args.mode.__str__()}/", args.sample_rate, f"{seed}", modelname=args.model_name.__str__())
 
 def str2bool(value):
     if value.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -209,7 +209,20 @@ def parse_cli_args():
         default={},
         help="Additional arguments of the DD schedule."
     )
+    parser.add_argument(
+        "--output_path",
+        type=str,
+        default=None,
+        help="Output path."
+    )
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        default=None,
+        help="Model name for path."
+    )
     return parser.parse_args()
+
 
 if __name__ == '__main__':
     main()

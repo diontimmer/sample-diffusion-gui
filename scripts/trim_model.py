@@ -5,8 +5,8 @@ import time
 # original code by @Twobob
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python trim_model.py <model_path>")
+    if len(sys.argv) != 3:
+        print("Usage: python trim_model.py <model_path> <output_path>")
         sys.exit(1)
 
     model_path = sys.argv[1]
@@ -24,7 +24,7 @@ def main():
 
     trimmed = trim_model(untrimmed)
 
-    output_path = model_path.replace(".ckpt", "_trim.ckpt")
+    output_path = sys.argv[2]
     torch.save(trimmed, output_path)
 
     end_time = time.process_time()
