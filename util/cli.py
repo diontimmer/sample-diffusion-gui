@@ -3,12 +3,11 @@ import torch
 import argparse
 
 from util.util import load_audio, save_audio, cropper
-from util.platform import get_torch_device_type
+from util.platform_helpers import get_torch_device_type
 from dance_diffusion.api import RequestHandler, Request, Response, RequestType, SamplerType, SchedulerType, ModelType
 
-def main():
-    args = parse_cli_args()
-    
+
+def start_diffuse(args):   
     device_type_accelerator = args.device_accelerator if(args.device_accelerator != None) else get_torch_device_type()
     device_accelerator = torch.device(device_type_accelerator)
     device_offload = torch.device(args.device_offload)
@@ -19,9 +18,9 @@ def main():
     
     seed = args.seed if(args.seed!=-1) else torch.randint(0, 4294967294, [1], device=device_type_accelerator).item()
     print(f"Using accelerator: {device_type_accelerator}, Seed: {seed}.")
-    
+
     request = Request(
-        request_type=args.mode,
+        request_type=RequestType[args.mode],
         model_path=args.model,
         model_type=ModelType.DD,
         model_chunk_size=args.chunk_size,
@@ -41,10 +40,10 @@ def main():
                 
         steps=args.steps,
         
-        sampler_type=args.sampler,
+        sampler_type=SamplerType[args.sampler],
         sampler_args=args.sampler_args,
         
-        scheduler_type=args.schedule,
+        scheduler_type=SchedulerType[args.schedule],
         scheduler_args=args.schedule_args
     )
     
@@ -222,7 +221,3 @@ def parse_cli_args():
         help="Model name for path."
     )
     return parser.parse_args()
-
-
-if __name__ == '__main__':
-    main()

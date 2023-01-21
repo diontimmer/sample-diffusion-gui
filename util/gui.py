@@ -2,10 +2,11 @@ import os
 import glob
 import sys
 import subprocess
-from cli import parse_cli_args
+from util.cli import parse_cli_args, start_diffuse
 import PySimpleGUI as sg
 from threading import Thread
 import re
+from util.trim_model import start_trim
 
 
 def refresh_models(window):
@@ -19,20 +20,15 @@ def importmodel_cmd(values):
     model_path = v['model_path']
     sample_rate = v['sample_rate']
     model_size = v['model_size']
-    cmd = [sys.executable, 'scripts/trim_model.py', f'{model_path}', f'models/{model_name}_{sample_rate}_{model_size}.ckpt']
-    p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, universal_newlines=True)
-    while True:
-        line = p.stdout.readline()
-        if not line:
-            break
-        print(line, end="")
-    p.wait()
+    start_trim(model_path, f'models/{model_name}_{sample_rate}_{model_size}.ckpt')
+
 
 def apply_model_params(window, model_path):
     loaded_model_samplerate = model_path.split('.')[-2].split('_')[-2]
     loaded_model_size = model_path.split('.')[-2].split('_')[-1]
     window['sample_rate'].update(value=loaded_model_samplerate)
     window['chunk_size'].update(value=loaded_model_size)
+
 
 def load_model(window):
     # create the layout
@@ -86,34 +82,44 @@ def extract_percentage(output):
         return None
 
 
-def generate(window, values):
-    window['Generate'].update(disabled=True)
+def set_total_output(window, values):
+    try:
+        total = int(values['batch_size']) * int(values['batch_loop'])
+        window['batch_viewer'].update(value=f'Total output files: {total}')
+    except:
+        window['batch_viewer'].update(value='x')
+
+
+def get_args_from_window(values):
     args = parse_cli_args()
     args_keys = list(vars(args).keys())
     for key in args_keys:
         if key in values:
             setattr(args, key, values[key])
-    arg_items = vars(args)
-    # remove entry from arg items if the value is the same as in default_settings_items
-    stripped_args = {}
-    for key, value in arg_items.items():
-        if value != str(default_settings.get(key)) and value != default_settings.get(key) and value != '':
-            stripped_args[key] = value
-    if 'model' not in stripped_args.keys():
-        stripped_args['model'] = values['model']
-    stripped_args['model'] = 'models/' + stripped_args['model']
-    model_filename = os.path.basename(stripped_args['model']).split('.')[0]
-    stripped_args['model_name'] = ''.join(model_filename.split('_')[:-2])
-    cmd_args = ' '.join([f'--{key} {value}' for key, value in stripped_args.items()])
-    cmd = f"{sys.executable} cli.py {cmd_args}"
-    print(cmd)
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
-    while True:
-        line = p.stdout.readline()
-        if not line:
-            break
-        print(line, end="")
-    p.wait()
+        if isinstance(getattr(args, key), str):
+            if getattr(args, key) == '':
+                setattr(args, key, None)
+            elif getattr(args, key).isdigit():
+                setattr(args, key, int(getattr(args, key)))
+            else:
+                try:
+                    setattr(args, key, float(getattr(args, key)))
+                except ValueError:
+                    pass
+
+    args.model = 'models/' + args.model
+    model_filename = os.path.basename(args.model).split('.')[0]
+    args.model_name = ''.join(model_filename.split('_')[:-2])
+    args.seed = int(args.seed)
+    return args
+
+
+def generate(window, values):
+    window['Generate'].update(disabled=True)
+    args = get_args_from_window(values)
+    for i in range(int(values['batch_loop'])):
+        print(f'Processing loop {i+1}/{values["batch_loop"]}')
+        start_diffuse(args)
     print('Process Finished!')
     window['Generate'].update(disabled=False)
 

@@ -1,7 +1,8 @@
 import os
 import torch
 import torchaudio
-from pydub import AudioSegment
+from pydub import AudioSegment, effects
+from util.note_detect import detect_notes
 
 
 def tensor_slerp_2D(a: torch.Tensor, b: torch.Tensor, t: float):
@@ -52,7 +53,14 @@ def save_audio(audio_out, output_path: str, sample_rate, id_str:str = None, mode
         end_trim = detect_leading_silence(sound.reverse())
         duration = len(sound)
         trimmed_sound = sound[start_trim:duration - end_trim]
-        trimmed_sound.export(output_file, format="wav")     
+
+        # normalize
+        normalized_sound = effects.normalize(trimmed_sound, headroom=1.0)
+        normalized_sound.export(output_file, format="wav")
+        note = detect_notes(output_file)
+        # rename output_file with note before extension
+        keyed_output_file = os.path.splitext(output_file)[0] + "_" + note + os.path.splitext(output_file)[1]
+        os.rename(output_file, keyed_output_file)
 
 
 def detect_leading_silence(sound, silence_threshold=-50.0, chunk_size=1):

@@ -10,7 +10,9 @@ settings_header = [
                     [sg.T('Model File'), sg.Combo(loaded_models, key='model', default_value=loaded_models[0], enable_events=True)],
                     [sg.T('Mode'), sg.Combo(['Generation', 'Interpolation', 'Extrapolation', 'Inpainting', 'Extension'], default_value=default_settings['mode'], key='mode')],
                     [sg.T('Output Path'), sg.InputText('output', key='output_path'), sg.FolderBrowse()],
-                    [sg.T('Batch Size'), sg.InputText(default_settings['batch_size'], key='batch_size')]]
+                    [sg.T('Batch Loop'), sg.InputText('1', key='batch_loop', enable_events=True)],
+                    [sg.T('Internal Batch Size'), sg.InputText(default_settings['batch_size'], key='batch_size', enable_events=True)],
+                    [sg.T('Total output files: 1', key='batch_viewer')]]
 settings_row_1 = [
                     [sg.Checkbox('use_autocast', default=default_settings['use_autocast'], key='use_autocast')],
                     [sg.Checkbox('use_autocrop', default=default_settings['use_autocrop'], key='use_autocrop')],
@@ -53,5 +55,8 @@ while True:
         load_model(window)
     if event == 'model':
         apply_model_params(window, values['model'])
+    if event in ('batch_loop', 'batch_size'):
+        set_total_output(window, values)
+
 
 window.close()
