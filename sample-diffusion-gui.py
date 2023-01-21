@@ -8,7 +8,7 @@ loaded_models = get_models()
 
 settings_header = [
                     [sg.T('Model File'), sg.Combo(loaded_models, key='model', default_value=loaded_models[0], enable_events=True)],
-                    [sg.T('Mode'), sg.Combo(['Generation', 'Interpolation', 'Extrapolation', 'Inpainting', 'Extension'], default_value=default_settings['mode'], key='mode')],
+                    [sg.T('Mode'), sg.Combo(['Generation', 'Interpolation', 'Variation', 'Inpainting', 'Extension'], default_value=default_settings['mode'], key='mode')],
                     [sg.T('Output Path'), sg.InputText('output', key='output_path'), sg.FolderBrowse()],
                     [sg.T('Batch Loop'), sg.InputText('1', key='batch_loop', enable_events=True)],
                     [sg.T('Internal Batch Size'), sg.InputText(default_settings['batch_size'], key='batch_size', enable_events=True)],
@@ -38,7 +38,7 @@ buttons = [
 
 
 
-window = sg.Window('Dion Timmer Diffusion GUI', [settings_header, [sg.Frame('Settings', [[sg.Column(settings_row_1), sg.Column(settings_row_2)]])], buttons], finalize=True)
+window = sg.Window('Vextra Sample Diffusion', [settings_header, [sg.Frame('Settings', [[sg.Column(settings_row_1), sg.Column(settings_row_2)]])], buttons], finalize=True)
 
 
 if loaded_models[0]:
