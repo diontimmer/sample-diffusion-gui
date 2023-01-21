@@ -49,7 +49,7 @@ def main():
     )
     
     response = request_handler.process_request(request)#, lambda **kwargs: print(f"{kwargs['step'] / kwargs['x']}"))
-    save_audio((0.5 * response.result).clamp(-1,1) if(args.tame == True) else response.result, f"{args.output_path.__str__()}/{args.mode.__str__()}/", args.sample_rate, f"{seed}", modelname=args.model_name.__str__())
+    save_audio((0.5 * response.result).clamp(-1,1) if(args.tame == True) else response.result, f"{args.output_path.__str__()}/{args.mode.__str__()}/{args.model_name.__str__()}/", args.sample_rate, f"{seed}", modelname=args.model_name.__str__())
 
 def str2bool(value):
     if value.lower() in ('yes', 'true', 't', 'y', '1'):
