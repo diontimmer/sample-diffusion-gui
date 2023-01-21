@@ -7,7 +7,7 @@ loaded_models = get_models()
 
 
 settings_header = [
-                    [sg.T('Model File'), sg.Combo(loaded_models, key='model', default_value=loaded_models[0])],
+                    [sg.T('Model File'), sg.Combo(loaded_models, key='model', default_value=loaded_models[0], enable_events=True)],
                     [sg.T('Mode'), sg.Combo(['Generation', 'Interpolation', 'Extrapolation', 'Inpainting', 'Extension'], default_value=default_settings['mode'], key='mode')],
                     [sg.T('Output Path'), sg.InputText('output', key='output_path'), sg.FolderBrowse()],
                     [sg.T('Batch Size'), sg.InputText(default_settings['batch_size'], key='batch_size')]]
@@ -40,9 +40,7 @@ window = sg.Window('Dion Timmer Diffusion GUI', [settings_header, [sg.Frame('Set
 
 
 if loaded_models[0]:
-    loaded_model_samplerate = loaded_models[0].split('.')[-2].split('_')[-2]
-    loaded_model_size = loaded_models[0].split('.')[-2].split('_')[-1]
-    window['sample_rate'].update(value=loaded_model_samplerate)
+    apply_model_params(window, loaded_models[0])
 
 while True:
     event, values = window.read()
@@ -53,5 +51,7 @@ while True:
         thread.start()
     if event == 'Import Model':
         load_model(window)
+    if event == 'model':
+        apply_model_params(window, values['model'])
 
 window.close()

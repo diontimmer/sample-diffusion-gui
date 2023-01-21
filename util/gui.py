@@ -28,6 +28,11 @@ def importmodel_cmd(values):
         print(line, end="")
     p.wait()
 
+def apply_model_params(window, model_path):
+    loaded_model_samplerate = model_path.split('.')[-2].split('_')[-2]
+    loaded_model_size = model_path.split('.')[-2].split('_')[-1]
+    window['sample_rate'].update(value=loaded_model_samplerate)
+    window['chunk_size'].update(value=loaded_model_size)
 
 def load_model(window):
     # create the layout
