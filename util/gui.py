@@ -7,6 +7,23 @@ import PySimpleGUI as sg
 from threading import Thread
 import re
 from util.trim_model import start_trim
+import pickle
+
+
+def load_settings(window):
+    if os.path.exists('saved_settings.pickle'):
+        with open('saved_settings.pickle', 'rb') as f:
+            saved_settings = pickle.load(f)
+        for key in saved_settings:
+            try:
+                window[key].update(value=saved_settings[key])
+            except TypeError:
+                pass
+
+
+def save_settings(values):
+    with open('saved_settings.pickle', 'wb') as f:
+        pickle.dump(values, f)
 
 
 def refresh_models(window):
@@ -41,7 +58,7 @@ def load_model(window):
     ]
     
     # create the window
-    popup_window = sg.Window('Select File and Input Parameters', popup_layout)
+    popup_window = sg.Window('Select File and Input Parameters', popup_layout, icon='util/data/dtico.ico')
     
     # event loop to process user inputs
     while True:

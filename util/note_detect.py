@@ -17,7 +17,7 @@ def detect_notes(path):
 
     for i in range(file_length) :
         wdata=audio_file.readframes(1)
-        data=struct.unpack("<q",wdata)
+        data=struct.unpack("<i",wdata)
         sound[i] = int(data[0])
 
 

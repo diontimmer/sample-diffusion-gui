@@ -148,7 +148,7 @@ def parse_cli_args():
     parser.add_argument(
         "--interpolations_linear",
         type=int,
-        default=None,
+        default=3,
         help="The number of interpolations, even spacing."
     )
     parser.add_argument(
@@ -192,7 +192,10 @@ def parse_cli_args():
     parser.add_argument(
         "--sampler_args",
         type=json.loads,
-        default={'use_tqdm': True},
+        default={
+                'use_tqdm': True,
+                'eta': 0,
+                                    },
         help="Additional arguments of the DD sampler."
     )
     parser.add_argument(

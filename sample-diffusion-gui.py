@@ -7,30 +7,29 @@ loaded_models = get_models()
 
 
 settings_header = [
-                    [sg.T('Model File'), sg.Combo(loaded_models, key='model', default_value=loaded_models[0], enable_events=True)],
-                    [sg.T('Mode'), sg.Combo(['Generation', 'Interpolation', 'Variation', 'Inpainting', 'Extension'], default_value=default_settings['mode'], key='mode')],
-                    [sg.T('Output Path'), sg.InputText('output', key='output_path'), sg.FolderBrowse()],
-                    [sg.T('Batch Loop'), sg.InputText('1', key='batch_loop', enable_events=True)],
-                    [sg.T('Internal Batch Size'), sg.InputText(default_settings['batch_size'], key='batch_size', enable_events=True)],
-                    [sg.T('Total output files: 1', key='batch_viewer')]]
+                    [sg.T('Model File', tooltip='Path to the model checkpoint file to be used.'), sg.Combo(loaded_models, key='model', default_value=loaded_models[0], enable_events=True,)],
+                    [sg.T('Mode', tooltip='The mode of operation'), sg.Combo(['Generation', 'Interpolation', 'Variation'], default_value=default_settings['mode'], key='mode')],
+                    [sg.T('Output Path', tooltip='Path for output renders.'), sg.InputText('output', key='output_path'), sg.FolderBrowse()],
+                    [sg.T('Batch Loop', tooltip='The number of times the internal batch size will loop.'), sg.InputText('1', key='batch_loop', enable_events=True)],
+                    [sg.T('Internal Batch Size', tooltip='The maximal number of samples to be produced per batch.'), sg.InputText(default_settings['batch_size'], key='batch_size', enable_events=True)],
+                    [sg.T('Total output files: 1', tooltip='Batch Loop * Internal Batch Size', key='batch_viewer')]]
 settings_row_1 = [
-                    [sg.Checkbox('use_autocast', default=default_settings['use_autocast'], key='use_autocast')],
-                    [sg.Checkbox('use_autocrop', default=default_settings['use_autocrop'], key='use_autocrop')],
-                    [sg.T('Device Offload'), sg.Combo(['cpu', 'gpu'], default_value=default_settings['device_offload'], key='device_offload')],
-                    [sg.T('Sample Rate'), sg.InputText(default_settings['sample_rate'], key='sample_rate')],
-                    [sg.T('Chunk Size'), sg.InputText(default_settings['chunk_size'], key='chunk_size')],
-                    [sg.T('Seed'), sg.InputText(default_settings['seed'], key='seed')],
-                    [sg.T('Noise Level'), sg.InputText(default_settings['noise_level'], key='noise_level')]]
+                    [sg.Checkbox('Use Autocast', default=default_settings['use_autocast'], key='use_autocast')],
+                    [sg.Checkbox('Use Autocrop', default=default_settings['use_autocrop'], key='use_autocrop', tooltip='Use autocrop (automatically crops audio provided to chunk size).')],
+                    [sg.T('Device Offload', tooltip='Device to store models when not in use.'), sg.Combo(['cpu', 'gpu'], default_value=default_settings['device_offload'], key='device_offload')],
+                    [sg.T('Sample Rate', tooltip='  The samplerate the model was trained on.'), sg.InputText(default_settings['sample_rate'], key='sample_rate')],
+                    [sg.T('Chunk Size', tooltip='The native chunk size of the model.'), sg.InputText(default_settings['chunk_size'], key='chunk_size')],
+                    [sg.T('Seed', tooltip='The seed used for reproducable outputs. -1 for random seed.'), sg.InputText(default_settings['seed'], key='seed')],
+                    [sg.T('Noise Level', tooltip='The noise level (used for variations & interpolations).'), sg.InputText(default_settings['noise_level'], key='noise_level')]]
 
 settings_row_2 = [
-                    [sg.T('Interp Audio Source Path'), sg.InputText(default_settings['audio_source'], key='audio_source'), sg.FileBrowse(file_types=(('Audio Files', '*.wav'),))],
-                    [sg.T('Interp Audio Target Path'), sg.InputText(default_settings['audio_target'], key='audio_target'), sg.FileBrowse(file_types=(('Audio Files', '*.wav'),))],
-                    [sg.T('Resamples'), sg.InputText(default_settings['resamples'], key='resamples')],
-                    [sg.Checkbox('Keep Start', default=default_settings['keep_start'], key='keep_start')],
-                    [sg.Checkbox('Tame', default=default_settings['tame'], key='tame')],
-                    [sg.T('Steps'), sg.InputText(default_settings['steps'], key='steps')],
-                    [sg.T('Sampler'), sg.Combo(['IPLMS', 'MPL', 'BP'], default_value=default_settings['sampler'], key='sampler')],
-                    [sg.T('Setting'), sg.Combo(['CrashSchedule', 'LinearSchedule', 'DDPMSchedule', 'SplicedDDPMCosineSchedule', 'LogSchedule'], default_value=default_settings['schedule'], key='schedule')]]
+                    [sg.T('Input Audio Path', tooltip='Path to audio (used for variations & interpolations).'), sg.InputText(default_settings['audio_source'], key='audio_source'), sg.FileBrowse(file_types=(('Audio Files', '*.wav'),))],
+                    [sg.T('Interp Audio Target Path', tooltip='Path to the audio target (used for interpolations).'), sg.InputText(default_settings['audio_target'], key='audio_target'), sg.FileBrowse(file_types=(('Audio Files', '*.wav'),))],
+                    [sg.T('Interp Steps', tooltip='The number of interpolations.'), sg.InputText(default_settings['interpolations_linear'], key='interpolations_linear')],
+                    [sg.Checkbox('Tame', default=default_settings['tame'], key='tame', tooltip='Decrease output by 3db, then clip.')],
+                    [sg.T('Steps', tooltip='The number of steps for the sampler.'), sg.InputText(default_settings['steps'], key='steps')],
+                    [sg.T('Sampler', tooltip='The sampler used for the diffusion model.'), sg.Combo(['IPLMS', 'DDPM', 'DDIM'], default_value=default_settings['sampler'], key='sampler')],
+                    [sg.T('Schedule Setting', tooltip='The schedule used for the diffusion model.'), sg.Combo(['CrashSchedule', 'LinearSchedule', 'DDPMSchedule', 'SplicedDDPMCosineSchedule', 'LogSchedule'], default_value=default_settings['schedule'], key='schedule')]]
 
 buttons = [          
           [sg.Button('Generate')],
@@ -38,15 +37,14 @@ buttons = [
 
 
 
-window = sg.Window('Vextra Sample Diffusion', [settings_header, [sg.Frame('Settings', [[sg.Column(settings_row_1), sg.Column(settings_row_2)]])], buttons], finalize=True)
+window = sg.Window('Vextra Sample Diffusion', [settings_header, [sg.Frame('Settings', [[sg.Column(settings_row_1), sg.Column(settings_row_2)]])], buttons], finalize=True, icon='util/data/dtico.ico', enable_close_attempted_event=True)
 
-
-if loaded_models[0]:
-    apply_model_params(window, loaded_models[0])
+load_settings(window)
 
 while True:
     event, values = window.read()
-    if event in (sg.WIN_CLOSED, 'Exit'):
+    if event in (sg.WINDOW_CLOSE_ATTEMPTED_EVENT, 'Exit'):
+        save_settings(values)
         break
     if event == 'Generate':
         thread = Thread(target=generate, args=(window, values,))

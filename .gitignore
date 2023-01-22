@@ -62,3 +62,4 @@ audio_out
 sample_diffusion.egg-info
 dance_diffusion.egg-info
 __pycache__
+saved_settings.pickle

@@ -45,7 +45,7 @@ def save_audio(audio_out, output_path: str, sample_rate, id_str:str = None, mode
         
         output = sample.cpu()
 
-        torchaudio.save(output_file, output, sample_rate)
+        torchaudio.save(output_file, output, sample_rate, encoding='PCM_S', bits_per_sample=16)
 
         # silence trim
         sound = AudioSegment.from_file(output_file)
