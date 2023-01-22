@@ -1,10 +1,15 @@
 from util.gui import *
 from threading import Thread
+import diffusion_library.sampler as samplerhook
 
 sg.theme('DarkGrey7')   # Add a touch of color
 
 loaded_models = get_models()
 
+tree_layout = [
+                [sg.Button('Play Selection'), sg.Button('Save Selection'), sg.Button('Load Selection As Variation'), sg.T('Preview Volume: '), sg.Slider(range=(0,100), orientation='h', size=(50, 20), enable_events=True, key="-VOLUME-", default_value=100)],
+                [sg.Tree(data=treedata, key='file_tree', headings=[], auto_size_columns=True, num_rows=20, enable_events=True, show_expanded=True, expand_x=True)]
+                ]
 
 settings_header = [
                     [sg.T('Model File', tooltip='Path to the model checkpoint file to be used.'), sg.Combo(loaded_models, key='model', default_value=loaded_models[0], enable_events=True,)],
@@ -32,29 +37,63 @@ settings_row_2 = [
                     [sg.T('Schedule Setting', tooltip='The schedule used for the diffusion model.'), sg.Combo(['CrashSchedule', 'LinearSchedule', 'DDPMSchedule', 'SplicedDDPMCosineSchedule', 'LogSchedule'], default_value=default_settings['schedule'], key='schedule')]]
 
 buttons = [          
-          [sg.Button('Generate')],
-          [sg.Button('Import Model')]]
+          [sg.Button('Generate'), sg.Button('Import Model')]]
 
 
 
-window = sg.Window('Vextra Sample Diffusion', [settings_header, [sg.Frame('Settings', [[sg.Column(settings_row_1), sg.Column(settings_row_2)]])], buttons], finalize=True, icon='util/data/dtico.ico', enable_close_attempted_event=True)
+window = sg.Window('Vextra Sample Diffusion', [
+    [sg.Frame('Preview', tree_layout)],
+    [sg.Sizer(0, 10)], 
+    settings_header,
+    [sg.Sizer(0, 10)],  
+    [sg.Frame('Settings', [[sg.Column(settings_row_1), sg.Column(settings_row_2)]])],
+    [sg.Multiline('', size=(100, 10), key='log', autoscroll=True, reroute_stdout=True, reroute_stderr=False, disabled=True, expand_x=True)],
+    [sg.ProgressBar(100, size=(0, 30), expand_x=True, key='progbar')], 
+    buttons,
+    ], finalize=True, icon='util/data/dtico.ico', enable_close_attempted_event=True)
+window['file_tree'].bind('<Double-Button-1>', '_double_clicked')
+samplerhook.window = window
+
+
 
 load_settings(window)
 
 while True:
     event, values = window.read()
+
     if event in (sg.WINDOW_CLOSE_ATTEMPTED_EVENT, 'Exit'):
         save_settings(values)
         break
+
     if event == 'Generate':
         thread = Thread(target=generate, args=(window, values,))
         thread.start()
+
     if event == 'Import Model':
         load_model(window)
+
     if event == 'model':
         apply_model_params(window, values['model'])
+
     if event in ('batch_loop', 'batch_size'):
         set_total_output(window, values)
+
+    if event == '-VOLUME-':
+        set_volume(values['-VOLUME-'])
+
+    if len(values['file_tree']) > 0:
+        if event in ('file_tree_double_clicked', 'Play Selection'):
+            play_audio(values['file_tree'][0])
+
+        if event == 'Save Selection':
+            Thread(target=copysave, args=(values,)).start()
+
+        if event == 'Load Selection As Variation':
+            try:
+                window['audio_source'].update(value=values['file_tree'][0])
+                window['mode'].update(value='Variation')
+            except (IndexError, TypeError):
+                pass        
 
 
 window.close()

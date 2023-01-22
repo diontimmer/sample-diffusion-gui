@@ -35,7 +35,7 @@ def load_audio(device, audio_path: str, sample_rate):
 
 
 def save_audio(audio_out, output_path: str, sample_rate, id_str:str = None, modelname='Sample'):
-
+    saved_paths = []
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     
@@ -61,6 +61,8 @@ def save_audio(audio_out, output_path: str, sample_rate, id_str:str = None, mode
         # rename output_file with note before extension
         keyed_output_file = os.path.splitext(output_file)[0] + "_" + note + os.path.splitext(output_file)[1]
         os.rename(output_file, keyed_output_file)
+        saved_paths.append(keyed_output_file)
+    return saved_paths
 
 
 def detect_leading_silence(sound, silence_threshold=-50.0, chunk_size=1):

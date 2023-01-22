@@ -6,6 +6,7 @@ from typing import Callable, Tuple
 
 from .util import t_to_alpha_sigma
 
+window = None
 
 class SamplerBase():
     
@@ -124,6 +125,7 @@ class DDPM(SamplerBase):
         use_range = trange if (use_tqdm if (use_tqdm != None) else False) else range
         
         for step in use_range(steps - 1):
+            window['progbar'].update(current_count=step+1, max=steps)
             x_t = self._step(
                 model_fn,
                 x_t,
@@ -205,7 +207,7 @@ class DDIM(SamplerBase):
         use_range = trange if (use_tqdm if (use_tqdm != None) else False) else range
         
         for step in use_range(steps - 1):
-            
+            window['progbar'].update(current_count=step+1, max=steps)
             alpha_now, sigma_now = t_to_alpha_sigma(ts[step]) # Get alpha / sigma for current timestep.
             alpha_next, sigma_next = t_to_alpha_sigma(ts[step + 1]) # Get alpha / sigma for next timestep.
             
@@ -291,7 +293,7 @@ class IPLMS(SamplerBase):
         use_range = trange if(use_tqdm if(use_tqdm != None) else False) else range
         
         for step in use_range(steps - 1):
-            
+            window['progbar'].update(current_count=step+1, max=steps)
             x_t, eps_t = self._step(
                 model_fn,
                 x_t,
