@@ -8,7 +8,7 @@ loaded_models = get_models()
 
 tree_layout = [
                 [sg.Button('Play Selection'), sg.Button('Save Selection'), sg.Button('Load Selection As Variation'), sg.T('Preview Volume: '), sg.Slider(range=(0,100), orientation='h', size=(50, 20), enable_events=True, key="-VOLUME-", default_value=100)],
-                [sg.Tree(data=treedata, key='file_tree', headings=[], auto_size_columns=True, num_rows=20, enable_events=True, show_expanded=True, expand_x=True)]
+                [sg.Tree(data=treedata, key='file_tree', headings=[], auto_size_columns=True, num_rows=20, enable_events=True, show_expanded=True, expand_x=True, row_height=5)]
                 ]
 
 settings_header = [
@@ -36,8 +36,7 @@ settings_row_2 = [
                     [sg.T('Sampler', tooltip='The sampler used for the diffusion model.'), sg.Combo(['IPLMS', 'DDPM', 'DDIM'], default_value=default_settings['sampler'], key='sampler')],
                     [sg.T('Schedule Setting', tooltip='The schedule used for the diffusion model.'), sg.Combo(['CrashSchedule', 'LinearSchedule', 'DDPMSchedule', 'SplicedDDPMCosineSchedule', 'LogSchedule'], default_value=default_settings['schedule'], key='schedule')]]
 
-buttons = [          
-          [sg.Button('Generate'), sg.Button('Import Model')]]
+buttons =           [sg.Button('Generate'), sg.Button('Import Model')]
 
 
 
@@ -47,14 +46,11 @@ window = sg.Window('Vextra Sample Diffusion', [
     settings_header,
     [sg.Sizer(0, 10)],  
     [sg.Frame('Settings', [[sg.Column(settings_row_1), sg.Column(settings_row_2)]])],
-    [sg.Multiline('', size=(100, 10), key='log', autoscroll=True, reroute_stdout=True, reroute_stderr=False, disabled=True, expand_x=True)],
     [sg.ProgressBar(100, size=(0, 30), expand_x=True, key='progbar')], 
     buttons,
-    ], finalize=True, icon='util/data/dtico.ico', enable_close_attempted_event=True)
+    ], finalize=True, icon='util/data/dtico.ico', enable_close_attempted_event=True, resizable=True)
 window['file_tree'].bind('<Double-Button-1>', '_double_clicked')
 samplerhook.window = window
-
-
 
 load_settings(window)
 
