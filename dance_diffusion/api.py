@@ -12,6 +12,8 @@ from .dd.inference import DDInference
 from diffusion_library.sampler import SamplerBase, DDPM, DDIM, IPLMS
 from diffusion_library.scheduler import SchedulerBase, LinearSchedule, DDPMSchedule, SplicedDDPMCosineSchedule, LogSchedule, CrashSchedule
 
+from util.scripts.merge_models_ratio import ratio_merge
+
 
 class ArgparseEnum(enum.Enum):
     
@@ -127,7 +129,7 @@ class RequestHandler:
                 tensor_result = self.handle_inpainting(request, callback)
 
             case RequestType.Extension:
-                tensor_result =  self.handle_extension(request, callback)
+                tensor_result = self.handle_extension(request, callback)
             
             case _:
                 raise ValueError("Unexpected RequestType in process_request")
@@ -137,6 +139,7 @@ class RequestHandler:
     def load_model(self, model_type, model_path, chunk_size, sample_rate):
         match model_type:
             case ModelType.DD:
+
                 self.model_wrapper = DDModelWrapper()
                 self.model_wrapper.load(
                     model_path,

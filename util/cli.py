@@ -46,9 +46,18 @@ def start_diffuse(args):
         scheduler_type=SchedulerType[args.schedule],
         scheduler_args=args.schedule_args
     )
-    
+    if not args.custom_batch_name:
+        save_name = seed
+    else:
+        save_name = f"{args.custom_batch_name}_{seed}"
     response = request_handler.process_request(request)#, lambda **kwargs: print(f"{kwargs['step'] / kwargs['x']}"))
-    files = save_audio((0.5 * response.result).clamp(-1,1) if(args.tame == True) else response.result, f"{args.output_path.__str__()}/{args.mode.__str__()}/{args.model_name.__str__()}/", args.sample_rate, f"{seed}", modelname=args.model_name.__str__())
+    files = save_audio(
+        audio_out=(0.5 * response.result).clamp(-1, 1) if (args.tame == True) else response.result, 
+        output_path=f"{str(args.output_path)}/{str(args.mode)}",
+        id_str=save_name, 
+        sample_rate=int(args.sample_rate), 
+        modelname=str(args.model_name)
+        )
     return files
 
 def str2bool(value):
@@ -223,5 +232,11 @@ def parse_cli_args():
         type=str,
         default=None,
         help="Model name for path."
+    )
+    parser.add_argument(
+        "--custom_batch_name",
+        type=str,
+        default=None,
+        help="Custom Batch Name for batch."
     )
     return parser.parse_args()

@@ -6,7 +6,17 @@ setup(
   description="",
   packages=find_packages(),
   install_requires=[
-    "torch",
+    "torchaudio",
+    "black",
+    "diffusers",
     "tqdm",
+    "PySimpleGUI",
+    "torchaudio",
+    "pydub",
+    "ema_pytorch",
+    "pytorch_lightning",
+    "pygame",
+    "soundfile",
+    "imageio-ffmpeg"
   ]
 )

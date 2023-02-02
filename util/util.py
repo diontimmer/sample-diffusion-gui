@@ -2,7 +2,7 @@ import os
 import torch
 import torchaudio
 from pydub import AudioSegment, effects
-from util.note_detect import detect_notes
+from util.scripts.note_detect import detect_notes
 
 
 def tensor_slerp_2D(a: torch.Tensor, b: torch.Tensor, t: float):
@@ -36,11 +36,14 @@ def load_audio(device, audio_path: str, sample_rate):
 
 def save_audio(audio_out, output_path: str, sample_rate, id_str:str = None, modelname='Sample'):
     saved_paths = []
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
-    
-    for ix, sample in enumerate(audio_out):
-        output_file = os.path.join(output_path, f"{modelname}_{id_str}_{ix + 1}.wav" if(id_str!=None) else f"sample_{ix + 1}.wav")
+    if not os.path.exists(os.path.join(output_path, modelname)):
+        os.makedirs(os.path.join(output_path, modelname))
+
+    for ix, sample in enumerate(audio_out, start=1):
+        output_file = os.path.join(output_path, modelname, f"{modelname}_{id_str}_{ix}.wav")
+        if os.path.exists(output_file):
+            os.remove(output_file)
+
         open(output_file, "a").close()
         
         output = sample.cpu()
@@ -60,6 +63,8 @@ def save_audio(audio_out, output_path: str, sample_rate, id_str:str = None, mode
         note = detect_notes(output_file)
         # rename output_file with note before extension
         keyed_output_file = os.path.splitext(output_file)[0] + "_" + note + os.path.splitext(output_file)[1]
+        if os.path.exists(keyed_output_file):
+            os.remove(keyed_output_file)
         os.rename(output_file, keyed_output_file)
         saved_paths.append(keyed_output_file)
     return saved_paths
