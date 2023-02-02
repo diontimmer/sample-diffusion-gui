@@ -60,7 +60,10 @@ def save_audio(audio_out, output_path: str, sample_rate, id_str:str = None, mode
         # normalize
         normalized_sound = effects.normalize(trimmed_sound, headroom=1.0)
         normalized_sound.export(output_file, format="wav")
-        note = detect_notes(output_file)
+        try:
+            note = detect_notes(output_file)
+        except:
+            note = 'X'
         # rename output_file with note before extension
         keyed_output_file = os.path.splitext(output_file)[0] + "_" + note + os.path.splitext(output_file)[1]
         if os.path.exists(keyed_output_file):
