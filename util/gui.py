@@ -235,6 +235,7 @@ def get_args_from_window(values):
     args.model_name = ''.join(model_filename.split('_')[:-2])
     args.seed = int(args.seed)
     args.chunk_size = int(eval(str(args.chunk_size)))
+    args.device_offload = 'cuda' if values['device_offload'] == 'gpu' else 'cpu'
     return args
 
 
