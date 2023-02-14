@@ -1,5 +1,4 @@
 from util.gui import *
-from threading import Thread
 import diffusion_library.sampler as samplerhook
 
 sg.theme('DarkGrey7')   # Add a touch of color

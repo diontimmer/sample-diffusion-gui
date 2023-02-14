@@ -100,17 +100,19 @@ def refresh_models(window):
     window['secondary_model'].update(values=models, value=window['secondary_model'].get())
 
 
-def importmodel_cmd(values):
-    v = values
+def importmodel_cmd(v):
+    if not os.path.exists('models'):
+        os.mkdir('models')
     model_name = v['model_name'] if v['model_name'] != '' else os.path.basename(v['model_path']).split('.')[0]
     model_path = v['model_path']
     sample_rate = v['sample_rate']
     model_size = v['model_size']
     out_name = f'models/{model_name}_{sample_rate}_{model_size}.ckpt'
-    if not v['latent']:
-        start_trim(model_path, out_name)
-    else:
-        prune_latent_uncond(model_path, out_name, sample_rate, model_size)
+    if v['trim']:
+        if not v['latent']:
+            start_trim(model_path, out_name)
+        else:
+            prune_latent_uncond(model_path, out_name, sample_rate, model_size)
 
 
 def apply_model_params(window, model_path):
@@ -124,8 +126,8 @@ def show_save_window(window, values):
     # create the layout
     modelname = ''.join(values["model"].split('_')[:-2])
     popup_layout = [
-        [sg.Text('Batch Name'), sg.InputText(default_text=values["custom_batch_name"], readonly=True, disabled_readonly_text_color='black')],
-        [sg.Text('Output Path:'), sg.Input(f'{values["output_path"]}/{values["mode"]}/{modelname}/', readonly=True, disabled_readonly_text_color='black')],
+        [sg.Text(f'Batch Name: {values["custom_batch_name"]}')],
+        [sg.Text(f'Output Path: {values["output_path"]}/{values["mode"]}/{modelname}/')],
         [sg.Button('Confirm'), sg.Button('Cancel')]
     ]
     
@@ -147,17 +149,19 @@ def show_save_window(window, values):
 def load_model(window):
     # create the layout
     popup_layout = [
+        [sg.Text('The importer will move the selected model to the models folder and rename it for use in autocomplete.\nThis tool can also trim the model to remove data for training.')],
         [sg.Text('Select a .ckpt file'), sg.Input('path/to/model.ckpt', key='model_path'), sg.FileBrowse(file_types=(("Checkpoint files", "*.ckpt"),))],
         [sg.Text('Model Name'), sg.InputText(default_text='', key='model_name')],
         [sg.Text('Sample Rate'), sg.InputText(default_text='44100', key='sample_rate')],
         [sg.Text('Size'), sg.InputText(default_text='65536', key='model_size')],
         # checkbox for Latent?
         [sg.Checkbox('Latent?', key='latent')],
+        [sg.Checkbox('Trim?', key='trim', default=True)],
         [sg.Button('Confirm'), sg.Button('Cancel')]
     ]
     
     # create the window
-    popup_window = sg.Window('Select File and Input Parameters', popup_layout, icon='util/data/dtico.ico')
+    popup_window = sg.Window('Select File and Input Parameters', popup_layout, icon='util/data/dtico.ico', element_justification='center')
     thread = None
     # event loop to process user inputs
     while True:
