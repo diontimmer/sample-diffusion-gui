@@ -26,7 +26,7 @@ Includes additional features such as:<br>
 
 
 
-Please place your model .ckpt files in the /models folder.
+Please import your models through the included model importer. This ensures the models are trimmed and have the correct format for the filenames for use in auto-complete.
 
 Various libs and snippets taken from:<br>
 https://github.com/Harmonai-org/sample-generator<br>
