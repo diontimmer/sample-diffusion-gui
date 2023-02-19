@@ -20,6 +20,9 @@ Includes additional features such as:<br>
 - Model merging
 - Instant input load for variation
 - Batch looping
+- Local model training
+
+Note: Local Model Training is not recommended for systems with less than 8GB of VRAM.
 
 
 ![alt text](https://www.dropbox.com/s/p409s4n4w1jkf4b/vextrasamplediffusion.png?raw=1 "Sample Diffusion")

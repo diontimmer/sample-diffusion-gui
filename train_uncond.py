@@ -17,7 +17,7 @@ from pytorch_lightning.utilities.rank_zero import rank_zero_only
 from einops import rearrange
 import torchaudio
 import wandb
-
+import os
 from dataset.dataset import SampleDataset
 
 from audio_diffusion.models import DiffusionAttnUnet1D
@@ -168,7 +168,9 @@ class DemoCallback(pl.Callback):
 
             log_dict = {}
             
-            filename = f'demo_{trainer.global_step:08}.wav'
+            if not os.path.exists('training_demos'):
+                os.makedirs('training_demos')
+            filename = f'training_demos/demo_{trainer.global_step:08}.wav'
             fakes = fakes.clamp(-1, 1).mul(32767).to(torch.int16).cpu()
             torchaudio.save(filename, fakes, self.sample_rate)
 

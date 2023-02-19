@@ -66,3 +66,4 @@ train_gui_settings.pickle
 tmp
 venv
 wandb
+training_demos
