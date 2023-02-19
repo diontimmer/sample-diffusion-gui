@@ -77,22 +77,6 @@ def show_trainer():
                 continue
 
             subprocess.run(['venv\\Scripts\\wandb', 'login', values['wandb_key']], shell=True)
-
-            print(["python3",
-                            "train_uncond.py", ckpt_path_str,
-                            "--name", name,
-                            "--training-dir", training_dir,
-                            "--sample-size", sample_size,
-                            "--accum-batches", accum_batches,
-                            "--sample-rate", sample_rate,
-                            "--batch-size", batch_size,
-                            "--demo-every", demo_every,
-                            "--checkpoint-every", checkpoint_every,
-                            "--num-workers", "2",
-                            "--num-gpus", "1", random_crop_str,
-                            "--save-path", output_dir])
-
-            breakpoint()
             subprocess.run(["python3",
                             "train_uncond.py", ckpt_path_str,
                             "--name", name,
