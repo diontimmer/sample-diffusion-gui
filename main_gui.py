@@ -1,4 +1,5 @@
 from util.gui import *
+from gui_train import show_trainer
 import diffusion_library.sampler as samplerhook
 
 sg.theme('DarkGrey7')   # Add a touch of color
@@ -37,7 +38,7 @@ settings_row_2 = [
                     [sg.T('Schedule Setting', tooltip='The schedule used for the diffusion model.'), sg.Combo(['CrashSchedule', 'LinearSchedule', 'DDPMSchedule', 'SplicedDDPMCosineSchedule', 'LogSchedule'], default_value=default_settings['schedule'], key='schedule')],
                     [sg.T('Secondary Model File', tooltip='Secondary model file used for merging.'), sg.Combo(loaded_models, key='secondary_model', default_value='', enable_events=True,)],
                     [sg.T('Secondary Merge Ratio', tooltip='Merge ratio for model merging [A-B] -> [0-1]'), sg.InputText('0.5', key='merge_ratio', size=(15,0), enable_events=True)]]
-buttons =           [sg.Button('Generate'), sg.Button('Import Model')]
+buttons =           [sg.Button('Generate'), sg.Button('Import Model'), sg.Button('Train')]
 
 
 
@@ -68,6 +69,9 @@ while True:
 
     if event == 'Generate':
         show_save_window(window, values)
+
+    if event == 'Train':
+        show_trainer()
 
     if event == 'Import Model':
         load_model(window)

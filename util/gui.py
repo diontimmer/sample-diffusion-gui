@@ -32,8 +32,6 @@ treedata = sg.TreeData()
 file_icon = b'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACUUlEQVR42o3SXUhTcRgG8Gc7+9ANXVpizCyQoTCiYNMEMYKCoiNGZjYQL6SPG6uLgsjM6qIsqAvBuii6qMi6qJmFHksrp/Zhajnxo5Ezp5tzbHO6Td3Wds75ZzfepEcfeO8efi+8vCKsEtUz/4GT+vh3SgqoHwyfHy/eULtST7QakPk+QN/UKZmwgoI/yKGuI1htNSTXrBtIezFLn9mVwExSEsgkPJQ8wd0n7usLVWlX1wVsfjpDn81LZJxxEiwu1SgRD8fkH3Q+clySEO5O6KGWEwRS7nvoc3Qy88YSgdPiRw6dCqmcgrnNC8+Qf2+gLsskCGysnaYrDqcwTcNhDFT2XFOXZ13ceTRd4f01D+dAwOmqTN8iCCTdmKCPG9TM2+9BjDbYtaxRZ9nREiBEKobfGppyVKSmCwKqy+N0WZmaae0JwPZyQscxuWbNcy8RK+Tw9c1M+Woy1gCujB0sOqZu+dg1B5dxTMea9pgz2mIkZJ2Dv93mizTkbhIEkPNh/5EHu1u7TR64jUN6vpvuTzjRS6LOBQuJktvR9n2P/wcKv1rzs1Wa+BiHUJRF5qnteFU/hfnm4QL+x6GWlfYsA0kln0cu3MvTukQieGcJIhEOdl8MP5sdYL+MFrC9hcJASZOHkG1JMHYFIQUBlj6PUsggMjsQ7Rws4oZLXwsC+UYPccvi4LJHIBETsLGlUSoRY4Z+c415mtVOtQxsPf1tRF6o19rGFyHlObASOXjbDLjGjmqMltesCfyLwvCpLyxWZiOeCpJpdyI881XoL74FgfwFFS8KIG5s1eQAAAAASUVORK5CYII='
 folder_icon = b'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAC9ElEQVR42nVTXUhTURw/d5vb3ea2ltt0kuicVK6CSmllyShhy2z4YlC+ZC9GGgRiD0b5SRihRqBivuST+eBDoWiKWKJpK8RA/IDcXBqbc1P3vTv3cTq73js/oHPPueec/8fv/D8xcGTUzhJatOkwCPIABrLhHnkJrWm0Rhpz8NGD8hh9qJslMtD2WIJjpapjDHGmkMFJxhkk30ZEockdDS46ozsOAvYiUntDDm6OA9QYfDHlpvNJrOJ8OUsgxSlcDAMQUkLIJHsAgklr2PNrK/wJUV40q/lmklc15Wq5IEkoL8rgCHAmFlcEAFLK5DE2wW4EgkFz0DNnD3W35YuqsUfjDq2My+opPc2Ty3isA97FNCjNGCb6IIkFgc0fBb3LXutmIFqG3R+ythak8yu0Cj5Oq7qDUfDdEiB+bgS8MRsupeCJl1O5uJDDiMOPmn3E+B9fJ3bn49pMxUWJWiHm0E+AEaOLGDN7B5DbHZR8ZYEiUa9TCnHSKsQwbQdh15zDgBV9WHE2FaSJeGzmnpPoV/9l3eHejZYM3c2aiFGK+lY0Ajazv/56moSOhz8cAc/H1l2Y5v2Cs/mmUsRNYNI8UDtqcniCkZKvD1QkAJLRCDms/kZtpoTOuz8UATWfTS4st2tu5sk1hTpLyqNzBwYXbcTIsn0AXTpiGUEpqdSdkupvn5HF47Ri98O3k6sGLPvNj9ZClaxCfy4Vp11wBUJgwrhFTJu2vDFKniIpUZOVhIu4bJIPEejgvJUYXrJ1YumvprQpQrznYb5SLhfxwP8HFWE0rc4AeDdptG64/WWk2dKG8ZYrSln5PbVCwE1gAaqK9osdUiWFJhEKgz6D2TNttHXb625UkwCCZ6MZSKbp6snk4sKzaQK5mIcytf8i3KtkYHH5wfD8mufb702ylL0vteZ4M7GfDpHNhJRLcxUysSpVzDlxnE/y/2774IJlJzi7urljcfp7EbF99/Wt/WY6NKoGtOhJHeLkoVs2ONLOoE1/qJ3/AZHFNTXP3Z4kAAAAAElFTkSuQmCC'
 
-batchnames = []
-
 def set_total_seconds(window):
     try:
         samplerate = int(window['sample_rate'].get())
@@ -57,6 +55,9 @@ def set_volume(volume):
     volume = volume/100
     current_sound_channel.set_volume(volume)
 
+def clear_tree(window):
+    treedata = sg.TreeData()
+    window['file_tree'].update(values=treedata)
 
 def insert_results_to_tree(batchname, results, window):
     for result in results:
@@ -118,8 +119,11 @@ def importmodel_cmd(v):
 def apply_model_params(window, model_path):
     loaded_model_samplerate = model_path.split('.')[-2].split('_')[-2]
     loaded_model_size = model_path.split('.')[-2].split('_')[-1]
-    window['sample_rate'].update(value=loaded_model_samplerate)
-    window['chunk_size'].update(value=loaded_model_size)
+
+    if loaded_model_samplerate in ['44100', '48000', '16000', '22050', '24000', '32000', '8000']:
+        window['sample_rate'].update(value=loaded_model_samplerate)
+    if loaded_model_size.isdigit():
+        window['chunk_size'].update(value=loaded_model_size)
 
 
 def show_save_window(window, values):
@@ -240,28 +244,35 @@ def get_args_from_window(values):
     args.seed = int(args.seed)
     args.chunk_size = int(eval(str(args.chunk_size)))
     args.device_offload = 'cuda' if values['device_offload'] == 'gpu' else 'cpu'
+    args.audio_source = values['audio_source'] if os.path.exists(values['audio_source']) else None
     return args
 
 
 def generate(window, values):
-    global batchnames
     window['Generate'].update(disabled=True)
     args = get_args_from_window(values)
+
+    # check paths
+    if args.mode in ('Variation', 'Interpolation') and args.audio_source is None:
+        print('Please select an audio source for variation mode.')
+        window['Generate'].update(disabled=False)
+        return
+
+    if args.mode == 'Interpolation' and args.audio_target is None:
+        print('Please select an audio target for interpolation mode.')
+        window['Generate'].update(disabled=False)
+        return
+
+    # start batch
+    clear_tree(window)
     if values['secondary_model'] != '':
         print('Merging models..')
         ratio_merge(f'models/{values["model"]}', f'models/{values["secondary_model"]}', alpha=float(values['merge_ratio']), out_file='models/sec_mrg_buffer.ckpt')
         args.model = 'models/sec_mrg_buffer.ckpt'
     batch_name = f"{args.model_name}_{time.strftime('%Y-%m-%d_%H-%M-%S')}" if not args.custom_batch_name else args.custom_batch_name
-    if batch_name in batchnames:
-        if batch_name[-1].isdigit():
-            batch_name = batch_name.replace(batch_name[-1], int(batch_name[-1]) + 1)
-        else:
-            batch_name = batch_name + '_1'
-    batchnames.append(batch_name)
     for i in range(int(values['batch_loop'])):
         print(f'Processing loop {i+1}/{values["batch_loop"]}')
         results = start_diffuse(args)
-        #check if batch name already in tree
         insert_results_to_tree(batch_name, results, window)
         empty_cache()
         gc.collect()

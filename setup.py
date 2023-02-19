@@ -17,6 +17,8 @@ setup(
     "pytorch_lightning",
     "pygame",
     "soundfile",
-    "imageio-ffmpeg"
+    "imageio-ffmpeg",
+    "prefigure",
+    "wandb"
   ]
 )
