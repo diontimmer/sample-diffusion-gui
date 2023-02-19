@@ -6,7 +6,6 @@ setup(
   description="",
   packages=find_packages(),
   install_requires=[
-    "torchaudio",
     "black",
     "diffusers",
     "tqdm",
@@ -19,6 +18,10 @@ setup(
     "soundfile",
     "imageio-ffmpeg",
     "prefigure",
-    "wandb"
+    "wandb",
+    "einops",
+    "matplotlib",
+    "pandas",
+    "librosa"
   ]
 )

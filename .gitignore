@@ -65,3 +65,4 @@ saved_settings.pickle
 train_gui_settings.pickle
 tmp
 venv
+wandb
