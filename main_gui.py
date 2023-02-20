@@ -1,9 +1,8 @@
 from util.gui import *
+import dance_diffusion as dd
 from gui_train import show_trainer
 
 sg.theme('DarkGrey7')   # Add a touch of color
-
-loaded_models = get_models()
 
 tree_layout = [
                 [sg.Button('Play'), sg.Button('Save'), sg.Button('Locate'), sg.Button('Load As Input'), sg.T('Preview Volume: '), sg.Slider(range=(0, 100), orientation='h', size=(50, 20), enable_events=True, key="-VOLUME-", default_value=100)],
@@ -11,7 +10,7 @@ tree_layout = [
                 ]
 
 settings_header = [
-                    [sg.T('Model File', tooltip='Path to the model checkpoint file to be used.'), sg.Combo(loaded_models, key='model', default_value='', enable_events=True,)],
+                    [sg.T('Model File', tooltip='Path to the model checkpoint file to be used.'), sg.Combo([], key='model', default_value='', enable_events=True, size=(30,0))],
                     [sg.T('Mode', tooltip='The mode of operation'), sg.Combo(['Generation', 'Interpolation', 'Variation'], default_value=default_settings['mode'], key='mode')],
                     [sg.T('Output Path', tooltip='Path for output renders.'), sg.InputText('output', key='output_path'), sg.FolderBrowse()],
                     [sg.T('Batch Loop', tooltip='The number of times the internal batch size will loop.'), sg.InputText('1', key='batch_loop', size=(15,0), enable_events=True)],
@@ -24,7 +23,7 @@ settings_row_1 = [
                     [sg.T('Seed', tooltip='The seed used for reproducable outputs. -1 for random seed.'), sg.InputText(default_settings['seed'], key='seed', size=(15,0))],
                     [sg.T('Noise Level', tooltip='The noise level (used for variations & interpolations).'), sg.InputText(default_settings['noise_level'], key='noise_level', size=(15,0))],
                     [sg.T('Steps', tooltip='The number of steps for the sampler.'), sg.InputText(default_settings['steps'], key='steps', size=(15,0))],
-                    [sg.T('Secondary Model File', tooltip='Secondary model file used for merging.'), sg.Combo(loaded_models, key='secondary_model', default_value='', enable_events=True,)],
+                    [sg.T('Secondary Model File', tooltip='Secondary model file used for merging.'), sg.Combo([], key='secondary_model', default_value='None', enable_events=True, size=(30,0))],
                     [sg.T('Secondary Merge Ratio', tooltip='Merge ratio for model merging [A-B] -> [0-1]'), sg.InputText('0.5', key='merge_ratio', size=(15,0), enable_events=True)],
                     [sg.T('Input Audio Path', tooltip='Path to audio (used for variations & interpolations).'), sg.InputText(default_settings['audio_source'], key='audio_source'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),))],
                     [sg.T('Interp Audio Target Path', tooltip='Path to the audio target (used for interpolations).'), sg.InputText(default_settings['audio_target'], key='audio_target'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),))],
@@ -43,16 +42,17 @@ settings_row_2 = [
 
 loading_gif_img = sg.Image(background_color=sg.theme_background_color(), key='-LOADINGGIF-')
 
-buttons =           [sg.Button('Generate'), sg.Button('Import Model'), sg.Button('Train'), loading_gif_img]
+buttons = [sg.Button('Generate'), sg.Button('Import Model'), sg.Button('Train'), loading_gif_img]
 
-
+prog_bar = sg.ProgressBar(100, size=(0, 30), expand_x=True, key='progbar')
 
 window = sg.Window('Vextra Sample Diffusion', [
     [sg.Frame('Preview', tree_layout)],
     [sg.Sizer(0, 10)], 
-    [sg.Frame('Main Settings', settings_header)],
-    [sg.Sizer(0, 10)],  
-    [sg.Frame('Additional Settings', [[sg.Column(settings_row_1)]], vertical_alignment='top'), sg.Frame('Sampler Settings', [[sg.Column(settings_row_2)]], vertical_alignment='top')],
+    [sg.Frame('Main Settings', settings_header, vertical_alignment='top'), sg.Frame('Sampler Settings', [[sg.Column(settings_row_2)]], vertical_alignment='top')],
+    [sg.Sizer(0, 10)],
+    [sg.Frame('Additional Settings', [[sg.Column(settings_row_1)]], vertical_alignment='top')],
+    [prog_bar],  
     buttons,
     ], finalize=True, icon='util/data/dtico.ico', enable_close_attempted_event=True, resizable=False)
 window['file_tree'].bind('<Double-Button-1>', '_double_clicked')
@@ -64,6 +64,8 @@ load_settings(window)
 refresh_models(window)
 set_total_output(window)
 set_total_seconds(window)
+prog_bar.update_bar(100, 100)
+dd.prog_bar = prog_bar
 
 while True:
     event, values = window.read(timeout=10)

@@ -45,6 +45,8 @@ stderr: {result.stderr.decode(encoding="utf8", errors="ignore") if len(result.st
     return result.stdout.decode(encoding="utf8", errors="ignore")
 
 def is_installed(package):
+    if package in aliases:
+        package = aliases[package]
     try:
         spec = importlib.util.find_spec(package)
     except ModuleNotFoundError:
@@ -70,7 +72,6 @@ SKIP_INSTALL = False
 
 torch_command = "pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu117"
 
-
 main_script_path = "main_gui.py"
 pre_torch_packages = []
 post_torch_packages = [
@@ -93,6 +94,10 @@ post_torch_packages = [
                         "tqdm",
                         "k-diffusion"
                         ]
+
+aliases = {
+    "k-diffusion": 'k_diffusion'
+}
 
 
 

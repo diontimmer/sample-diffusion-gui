@@ -1,15 +1,10 @@
 from copy import deepcopy
 import math
-from pathlib import Path
-import os
 import gc
 from diffusion import sampling
 import k_diffusion as K
 import torch
 from torch import nn
-from torch.nn import functional as F
-from torch.utils import data
-from tqdm import trange
 from einops import rearrange
 import torchaudio
 from audio_diffusion.models import DiffusionAttnUnet1D
@@ -17,7 +12,14 @@ import numpy as np
 from audio_diffusion.utils import Stereo, PadCrop
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+prog_bar = None
+step_size = 0
 
+def sampler_callback(info_dict):
+  global step_size
+  global prog_bar
+  current = prog_bar.widget['value']
+  prog_bar.update_bar(current + step_size)
 
 #@title Model code
 class DiffusionUncond(nn.Module):
@@ -125,38 +127,43 @@ def create_sampler_args(sampler_type, eta, beta_d, beta_min, rho, rtol, atol):
 
 def sample(model_fn, sampler_args, noise, steps=100, noise_level = 1.0):
   #Check for k-diffusion
+  global step_size
   if sampler_args.sampler_type.startswith('k-'):
     denoiser = K.external.VDenoiser(model_fn)
     sigmas = get_sigmas_vp(steps, sampler_args.beta_d, sampler_args.beta_min, eps_s=1e-3, device=device).half()
+    step_size = 100 / len(range(len(sigmas) - 1))
 
   elif sampler_args.sampler_type.startswith("v-"):
     t = torch.linspace(1, 0, steps + 1, device=device)[:-1]
     step_list = get_crash_schedule(t)
+    step_size = 100 / steps
 
   if sampler_args.sampler_type == "v-ddim":
-    return sampling.sample(model_fn, noise, step_list, sampler_args.eta, {})
+    return sampling.sample(model_fn, noise, step_list, sampler_args.eta, {}, callback=sampler_callback)
   elif sampler_args.sampler_type == "v-iplms":
-    return sampling.iplms_sample(model_fn, noise, step_list, {})
+    return sampling.iplms_sample(model_fn, noise, step_list, {}, callback=sampler_callback)
 
   elif sampler_args.sampler_type == "k-heun":
-    return K.sampling.sample_heun(denoiser, noise, sigmas, disable=False)
+    return K.sampling.sample_heun(denoiser, noise, sigmas, disable=False, callback=sampler_callback)
   elif sampler_args.sampler_type == "k-lms":
-    return K.sampling.sample_lms(denoiser, noise, sigmas, disable=False)
+    return K.sampling.sample_lms(denoiser, noise, sigmas, disable=False, callback=sampler_callback)
   elif sampler_args.sampler_type == "k-dpmpp_2s_ancestral":
-    return K.sampling.sample_dpmpp_2s_ancestral(denoiser, noise, sigmas, disable=False)
+    return K.sampling.sample_dpmpp_2s_ancestral(denoiser, noise, sigmas, disable=False, callback=sampler_callback)
   elif sampler_args.sampler_type == "k-dpm-2":
-    return K.sampling.sample_dpm_2(denoiser, noise, sigmas, disable=False)
+    return K.sampling.sample_dpm_2(denoiser, noise, sigmas, disable=False, callback=sampler_callback)
   elif sampler_args.sampler_type == "k-dpm-fast":
-    return K.sampling.sample_dpm_fast(denoiser, noise, sampler_args.sigma_min, sampler_args.sigma_max, steps, disable=False)
+    return K.sampling.sample_dpm_fast(denoiser, noise, sampler_args.sigma_min, sampler_args.sigma_max, steps, disable=False, callback=sampler_callback)
   elif sampler_args.sampler_type == "k-dpm-adaptive":
-    return K.sampling.sample_dpm_adaptive(denoiser, noise, sampler_args.sigma_min, sampler_args.sigma_max, rtol=sampler_args.rtol, atol=sampler_args.atol, disable=False)
+    return K.sampling.sample_dpm_adaptive(denoiser, noise, sampler_args.sigma_min, sampler_args.sigma_max, rtol=sampler_args.rtol, atol=sampler_args.atol, disable=False, callback=sampler_callback)
 
 def resample(model_fn, sampler_args, audio, chunk_size, steps=100, noise_level = 1.0, batch_size=1):
   global device
+  global step_size
   if sampler_args.sampler_type.startswith("v-"):
     t = torch.linspace(0, 1, steps + 1, device=device)
     step_list = get_crash_schedule(t)
     step_list = step_list[step_list < noise_level]
+    step_size = 100 / steps
 
     alpha, sigma = t_to_alpha_sigma(step_list[-1])
     noised = torch.randn([batch_size, 2, chunk_size], device='cuda')
@@ -167,66 +174,70 @@ def resample(model_fn, sampler_args, audio, chunk_size, steps=100, noise_level =
     denoiser = K.external.VDenoiser(model_fn)
     noised = audio + torch.randn_like(audio) * noise_level
     sigmas = get_sigmas_vp(steps, sampler_args.beta_d, sampler_args.beta_min, eps_s=1e-3, device=device).half()
+    step_size = 100 / len(range(len(sigmas) - 1))
 
   # Denoise
   if sampler_args.sampler_type == "v-iplms":
-    return sampling.iplms_sample(model_fn, noised, step_list.flip(0)[:-1], {})
+    return sampling.iplms_sample(model_fn, noised, step_list.flip(0)[:-1], {}, callback=sampler_callback)
 
   if sampler_args.sampler_type == "v-ddim":
-    return sampling.sample(model_fn, noise, step_list, sampler_args.eta, {})
+    return sampling.sample(model_fn, noise, step_list, sampler_args.eta, {}, callback=sampler_callback)
 
   elif sampler_args.sampler_type == "k-heun":
-    return K.sampling.sample_heun(denoiser, noised, sigmas, disable=False)
+    return K.sampling.sample_heun(denoiser, noised, sigmas, disable=False, callback=sampler_callback)
 
   elif sampler_args.sampler_type == "k-dpmpp_2s_ancestral":
-    return K.sampling.sample_dpmpp_2s_ancestral(denoiser, noised, sigmas, disable=False)
+    return K.sampling.sample_dpmpp_2s_ancestral(denoiser, noised, sigmas, disable=False, callback=sampler_callback)
 
   elif sampler_args.sampler_type == "k-lms":
-    return K.sampling.sample_lms(denoiser, noised, sigmas, disable=False)
+    return K.sampling.sample_lms(denoiser, noised, sigmas, disable=False, callback=sampler_callback)
 
   elif sampler_args.sampler_type == "k-dpm-2":
-    return K.sampling.sample_dpm_2(denoiser, noised, sigmas, s_noise=0., disable=False)
+    return K.sampling.sample_dpm_2(denoiser, noised, sigmas, s_noise=0., disable=False, callback=sampler_callback)
 
   elif sampler_args.sampler_type == "k-dpm-fast":
-    return K.sampling.sample_dpm_fast(denoiser, noised, sampler_args.sigma_min, noise_level, steps, disable=False)
+    return K.sampling.sample_dpm_fast(denoiser, noised, sampler_args.sigma_min, noise_level, steps, disable=False, callback=sampler_callback)
 
   elif sampler_args.sampler_type == "k-dpm-adaptive":
-    return K.sampling.sample_dpm_adaptive(denoiser, noised, sampler_args.sigma_min, noise_level, rtol=sampler_args.rtol, atol=sampler_args.atol, disable=False)
+    return K.sampling.sample_dpm_adaptive(denoiser, noised, sampler_args.sigma_min, noise_level, rtol=sampler_args.rtol, atol=sampler_args.atol, disable=False, callback=sampler_callback)
 
 def reverse_sample(model_fn, model_args, sampler_args, audio_samples, steps=100, noise_level = 1.0, batch_size=1):
   global device
+  global step_size
   if sampler_args.sampler_type.startswith("v-"):
     t = torch.linspace(0, 1, steps + 1, device=device)
     step_list = get_crash_schedule(t)
+    step_size = 100 / steps
     alpha, sigma = t_to_alpha_sigma(step_list[-1])
     noised = torch.randn([batch_size, 2, model_args.sample_size], device=device)
     noised = audio_samples * alpha + noised * sigma
     noise = noised
 
     if sampler_args.sampler_type == "v-iplms":
-      return sampling.iplms_sample(model_fn, audio_samples, step_list, {}, is_reverse=True)
+      return sampling.iplms_sample(model_fn, audio_samples, step_list, {}, is_reverse=True, callback=sampler_callback)
 
     if sampler_args.sampler_type == "v-ddim":
-      return sampling.sample(model_fn, noise, step_list, sampler_args.eta, {}, is_reverse=True)
+      return sampling.sample(model_fn, noise, step_list, sampler_args.eta, {}, is_reverse=True, callback=sampler_callback)
 
   elif sampler_args.sampler_type.startswith("k-"):
     denoiser = K.external.VDenoiser(model_fn)
     sigmas = get_sigmas_vp(steps, sampler_args.beta_d, sampler_args.beta_min, eps_s=1e-3, device=device).half()
+    step_size = 100 / len(range(len(sigmas) - 1))
 
   # Denoise
   if sampler_args.sampler_type == "k-heun":
-    return K.sampling.sample_heun(denoiser, audio_samples, sigmas.flip(0)[:-1], disable=False)
+    return K.sampling.sample_heun(denoiser, audio_samples, sigmas.flip(0)[:-1], disable=False, callback=sampler_callback)
   elif sampler_args.sampler_type == "k-lms":
-    return K.sampling.sample_lms(denoiser, audio_samples, sigmas.flip(0)[:-1], disable=False)
+    return K.sampling.sample_lms(denoiser, audio_samples, sigmas.flip(0)[:-1], disable=False, callback=sampler_callback)
   elif sampler_args.sampler_type == "k-dpmpp_2s_ancestral":
-    return K.sampling.sample_dpmpp_2s_ancestral(denoiser, audio_samples, sigmas.flip(0)[:-1], disable=False)
+    return K.sampling.sample_dpmpp_2s_ancestral(denoiser, audio_samples, sigmas.flip(0)[:-1], disable=False, callback=sampler_callback)
   elif sampler_args.sampler_type == "k-dpm-2":
-    return K.sampling.sample_dpm_2(denoiser, audio_samples, sigmas.flip(0)[:-1], s_noise=0., disable=False)
+    return K.sampling.sample_dpm_2(denoiser, audio_samples, sigmas.flip(0)[:-1], s_noise=0., disable=False, callback=sampler_callback)
   elif sampler_args.sampler_type == "k-dpm-fast":
-    return K.sampling.sample_dpm_fast(denoiser, audio_samples, noise_level, sampler_args.sigma_min, steps, disable=False)
+    return K.sampling.sample_dpm_fast(denoiser, audio_samples, noise_level, sampler_args.sigma_min, steps, disable=False, callback=sampler_callback)
 
   elif sampler_args.sampler_type == "k-dpm-adaptive":
-    return K.sampling.sample_dpm_adaptive(denoiser, audio_samples, noise_level, sampler_args.sigma_min, rtol=sampler_args.rtol, atol=sampler_args.atol, disable=False)
+    return K.sampling.sample_dpm_adaptive(denoiser, audio_samples, noise_level, sampler_args.sigma_min, rtol=sampler_args.rtol, atol=sampler_args.atol, disable=False, callback=sampler_callback)
 
 
 

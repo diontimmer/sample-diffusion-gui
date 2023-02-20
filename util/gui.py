@@ -6,6 +6,8 @@ import re
 from util.scripts.trim_model import start_trim, prune_latent_uncond
 from util.scripts.note_detect import detect_notes
 from util.scripts.merge_models_ratio import ratio_merge
+import torch
+import torchaudio
 import gc
 import pickle
 import sys
@@ -13,7 +15,7 @@ import time
 import tkinter as tk
 import shutil
 from torch.cuda import empty_cache
-from dance_diffusion import *
+import dance_diffusion as dd
 import argparse
 import json
 from pydub import AudioSegment, effects
@@ -104,8 +106,14 @@ def save_settings(values):
 
 def refresh_models(window):
     models = get_models()
-    window['model'].update(values=models, value=window['model'].get())
-    window['secondary_model'].update(values=models, value=window['secondary_model'].get())
+    if models:
+        if window['model'].get():
+            current_model = window['model'].get()
+        else:
+            current_model = models[0]
+        window['model'].update(values=models, value=current_model)
+        models.append('None')
+        window['secondary_model'].update(values=models, value=window['secondary_model'].get())
 
 
 def importmodel_cmd(v):
@@ -124,26 +132,36 @@ def importmodel_cmd(v):
 
 
 def apply_model_params(window, model_path):
-    loaded_model_samplerate = model_path.split('.')[-2].split('_')[-2]
-    loaded_model_size = model_path.split('.')[-2].split('_')[-1]
+    try:
+        loaded_model_samplerate = model_path.split('.')[-2].split('_')[-2]
+        loaded_model_size = model_path.split('.')[-2].split('_')[-1]
 
-    if loaded_model_samplerate in ['44100', '48000', '16000', '22050', '24000', '32000', '8000']:
-        window['sample_rate'].update(value=loaded_model_samplerate)
-    if loaded_model_size.isdigit():
-        window['chunk_size'].update(value=loaded_model_size)
+        if loaded_model_samplerate in ['44100', '48000', '16000', '22050', '24000', '32000', '8000']:
+            window['sample_rate'].update(value=loaded_model_samplerate)
+        if loaded_model_size.isdigit():
+            window['chunk_size'].update(value=loaded_model_size)
+    except:
+        pass
 
 
 def show_save_window(window, values):
     # create the layout
     modelname = ''.join(values["model"].split('_')[:-2])
+    custom_batch_name = values["custom_batch_name"]
+    if custom_batch_name:
+        modelname = custom_batch_name
+    else: 
+        custom_batch_name = 'Untitled'
+
     popup_layout = [
-        [sg.Text(f'Batch Name: {values["custom_batch_name"]}')],
+        [sg.Text(f'Some processes can be lengthy, please ensure your settings are correct!', font='Arial 12', text_color='yellow')],
+        [sg.Text(f'Batch Name: {custom_batch_name}')],
         [sg.Text(f'Output Path: {values["output_path"]}/{values["mode"]}/{modelname}/')],
         [sg.Button('Confirm'), sg.Button('Cancel')]
     ]
     
     # create the window
-    popup_window = sg.Window('Confirm', popup_layout, icon='util/data/dtico.ico')
+    popup_window = sg.Window('Confirm', popup_layout, icon='util/data/dtico.ico', element_justification='center')
     thread = None
     # event loop to process user inputs
     while True:
@@ -193,8 +211,7 @@ def load_model(window):
 def get_models():
     models = glob.glob('models/*.ckpt')
     models = [os.path.basename(model) for model in models]
-    models.append('')
-    if models == ['']:
+    if models == []:
         models = ['No models found, please load ckpt with tool.']
     return models
 
@@ -354,13 +371,17 @@ def extract_percentage(output):
     else:
         return None
 
-def save_audio(audio_out, output_path: str, sample_rate, id_str:str = None, modelname='Sample'):
+def save_audio(audio_out, output_path: str, sample_rate, id_str:str = None, modelname='Sample', custom_batch_name=None):
     saved_paths = []
-    if not os.path.exists(os.path.join(output_path, modelname)):
-        os.makedirs(os.path.join(output_path, modelname))
+    if custom_batch_name:
+        output_folder = os.path.join(output_path, custom_batch_name)
+    else:
+        output_folder = os.path.join(output_path, modelname)
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
 
     for ix, sample in enumerate(audio_out, start=1):
-        output_file = os.path.join(output_path, modelname, f"{modelname}_{id_str}_{ix}.wav")
+        output_file = os.path.join(output_folder, f"{modelname}_{id_str}_{ix}.wav")
         if os.path.exists(output_file):
             os.remove(output_file)
 
@@ -435,7 +456,10 @@ def get_args_from_window(values):
     args.model_name = ''.join(model_filename.split('_')[:-2])
     args.seed = int(args.seed)
     args.chunk_size = int(eval(str(args.chunk_size)))
-    args.audio_source = values['audio_source'] if os.path.exists(values['audio_source']) else None
+    if values['audio_source'] == 'None' or not os.path.exists(values['audio_source']):
+        args.audio_source = None
+    else: 
+        args.audio_source = values['audio_source']
     return args
 
 def open_in_finder(path):
@@ -470,20 +494,21 @@ def generate(window, values):
 
     # start batch
     clear_tree(window)
-    if values['secondary_model'] != '':
+    window['progbar'].update_bar(0)
+    if values['secondary_model'] != 'None':
         print('Merging models..')
         ratio_merge(f'models/{values["model"]}', f'models/{values["secondary_model"]}', alpha=float(values['merge_ratio']), out_file='models/sec_mrg_buffer.ckpt')
         args.model = 'models/sec_mrg_buffer.ckpt'
     batch_name = f"{args.model_name}_{time.strftime('%Y-%m-%d_%H-%M-%S')}" if not args.custom_batch_name else args.custom_batch_name
     
-    model_args = create_model_args(
+    model_args = dd.create_model_args(
         model_name=args.model_name,
         sample_size=args.chunk_size, 
         sample_rate=args.sample_rate, 
         latent_dim=0, 
         ckpt_path=args.model
         )
-    sampler_args = create_sampler_args(
+    sampler_args = dd.create_sampler_args(
         sampler_type=values['sampler'],
         eta=float(values['ddim_eta']), 
         beta_d=float(values['beta_d']), 
@@ -493,7 +518,7 @@ def generate(window, values):
         atol=float(values['atol'])
         )
 
-    model_fn = create_model(model_args)
+    model_fn = dd.create_model(model_args)
 
     seed = args.seed if(args.seed!=-1) else torch.randint(0, 4294967294, [1], device='cuda').item()
 
@@ -504,15 +529,44 @@ def generate(window, values):
 
     for i in range(int(values['batch_loop'])):
         print(f'Processing loop {i+1}/{values["batch_loop"]}')
+
         if args.mode == 'Generation':
-            audio = generate_func(args.batch_size, args.steps, model_fn, sampler_args, model_args)
+            audio = dd.generate_func(
+                args.batch_size, 
+                args.steps, 
+                model_fn, 
+                sampler_args, 
+                model_args
+                )
+
         elif args.mode == 'Variation':
-            audio = variation_func(args.batch_size, args.steps, model_fn, sampler_args, model_args, args.noise_level, args.audio_source)
+            audio = dd.variation_func(
+                args.batch_size, 
+                args.steps, 
+                model_fn, 
+                sampler_args, 
+                model_args, 
+                args.noise_level, 
+                args.audio_source
+                )
+
         elif args.mode == 'Interpolation':
-            audio = interpolation_func(args.batch_size, args.steps, model_fn, sampler_args, model_args, args.audio_source, args.audio_target, args.interpolations_linear)
+            audio = dd.interpolation_func(
+                args.batch_size, 
+                args.steps, model_fn, 
+                sampler_args, model_args, 
+                args.audio_source, 
+                args.audio_target, 
+                args.interpolations_linear
+                )
 
-
-        results = save_audio(audio, output_path=f"{str(args.output_path)}/{str(args.mode)}", sample_rate=model_args.sample_rate, id_str=save_name, modelname=model_args.model_name)
+        results = save_audio(
+            audio, 
+            output_path=f"{str(args.output_path)}\\{str(args.mode)}", 
+            sample_rate=model_args.sample_rate, 
+            id_str=save_name, 
+            modelname=model_args.model_name, 
+            custom_batch_name=args.custom_batch_name)
         insert_results_to_tree(batch_name, results, window)
         empty_cache()
         gc.collect()
