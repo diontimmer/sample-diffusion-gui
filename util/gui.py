@@ -494,7 +494,6 @@ def generate(window, values):
 
     # start batch
     clear_tree(window)
-    window['progbar'].update_bar(0)
     if values['secondary_model'] != 'None':
         print('Merging models..')
         ratio_merge(f'models/{values["model"]}', f'models/{values["secondary_model"]}', alpha=float(values['merge_ratio']), out_file='models/sec_mrg_buffer.ckpt')
@@ -529,6 +528,7 @@ def generate(window, values):
 
     for i in range(int(values['batch_loop'])):
         print(f'Processing loop {i+1}/{values["batch_loop"]}')
+        window['progbar'].update_bar(0)
 
         if args.mode == 'Generation':
             audio = dd.generate_func(
