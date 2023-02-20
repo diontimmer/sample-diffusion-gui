@@ -507,7 +507,7 @@ def generate(window, values):
         if args.mode == 'Generation':
             audio = generate_func(args.batch_size, args.steps, model_fn, sampler_args, model_args)
         elif args.mode == 'Variation':
-            audio = variation_func(args.batch_size, args.steps, model_fn, sampler_args, model_args, args.audio_source)
+            audio = variation_func(args.batch_size, args.steps, model_fn, sampler_args, model_args, args.noise_level, args.audio_source)
         elif args.mode == 'Interpolation':
             audio = interpolation_func(args.batch_size, args.steps, model_fn, sampler_args, model_args, args.audio_source, args.audio_target, args.interpolations_linear)
 

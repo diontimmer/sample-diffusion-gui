@@ -166,7 +166,7 @@ def resample(model_fn, sampler_args, audio, chunk_size, steps=100, noise_level =
   elif sampler_args.sampler_type.startswith("k-"):
     denoiser = K.external.VDenoiser(model_fn)
     noised = audio + torch.randn_like(audio) * noise_level
-    sigmas = K.sampling.get_sigmas_karras(steps, sampler_args.sigma_min, noise_level, sampler_args.rho, device=device)
+    sigmas = get_sigmas_vp(steps, sampler_args.beta_d, sampler_args.beta_min, eps_s=1e-3, device=device).half()
 
   # Denoise
   if sampler_args.sampler_type == "v-iplms":
@@ -211,7 +211,7 @@ def reverse_sample(model_fn, model_args, sampler_args, audio_samples, steps=100,
 
   elif sampler_args.sampler_type.startswith("k-"):
     denoiser = K.external.VDenoiser(model_fn)
-    sigmas = K.sampling.get_sigmas_karras(steps, sampler_args.sigma_min, noise_level, sampler_args.rho, device=device)
+    sigmas = get_sigmas_vp(steps, sampler_args.beta_d, sampler_args.beta_min, eps_s=1e-3, device=device).half()
 
   # Denoise
   if sampler_args.sampler_type == "k-heun":
