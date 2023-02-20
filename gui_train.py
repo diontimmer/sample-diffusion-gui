@@ -38,8 +38,9 @@ def run_training(window, values):
                     "--batch-size", values['BATCH_SIZE'],
                     "--demo-every", values['DEMO_EVERY'],
                     "--checkpoint-every", values['CHECKPOINT_EVERY'],
-                    "--num-workers", "2",
-                    "--num-gpus", "1", 
+                    "--num-workers", values['NUM_WORKERS'],
+                    "--num-nodes", values['NUM_NODES'],
+                    "--num-gpus", values['NUM_GPUS'], 
                     "--random-crop", f"True" if values['RANDOM_CROP'] else "",
                     "--save-path", f"{values['OUTPUT_DIR']}/{values['NAME']}"],), kwargs={'shell': True})
     t.start()
@@ -63,6 +64,9 @@ def show_trainer():
         [sg.Checkbox('Random Crop', default=True, key="RANDOM_CROP")],
         [sg.Text('Batch size'), sg.InputText(default_text="1", key="BATCH_SIZE")],
         [sg.Text('Accumulate batches'), sg.InputText(default_text="4", key="ACCUM_BATCHES")],
+        [sg.Text('Num Workers'), sg.InputText(default_text="1", key="NUM_WORKERS")],
+        [sg.Text('Num Nodes'), sg.InputText(default_text="1", key="NUM_NODES")],
+        [sg.Text('Num GPUs'), sg.InputText(default_text="1", key="NUM_GPUS")],
         [sg.Button('Train', bind_return_key=True)]
     ]
 
