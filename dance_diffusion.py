@@ -273,8 +273,9 @@ def variation_func(batch_size, steps, model_fn, sampler_args, model_args, noise_
     generated = resample(model_fn, sampler_args, audio_sample, model_args.sample_size, steps, noise_level, batch_size)
     return generated
 
-def interp_func(batch_size, steps, model_fn, sampler_args, model_args, source_audio, target_audio, n_interps, noise_level):
+def interpolation_func(batch_size, steps, model_fn, sampler_args, model_args, source_audio, target_audio, n_interps, noise_level):
     global device
+    global prog_bar
     torch.cuda.empty_cache()
     gc.collect()
     augs = torch.nn.Sequential(
@@ -286,6 +287,7 @@ def interp_func(batch_size, steps, model_fn, sampler_args, model_args, source_au
     audio_samples = augs(audio_sample_1).unsqueeze(0).repeat([2, 1, 1])
     audio_samples[1] = augs(audio_sample_2)    
     reversed = reverse_sample(model_fn, model_args, sampler_args, audio_samples, steps, noise_level, batch_size)    
-    latent_series = compute_interpolation_in_latent(reversed[0], reversed[1], [k/n_interps for k in range(n_interps + 2)])  
+    latent_series = compute_interpolation_in_latent(reversed[0], reversed[1], [k/n_interps for k in range(n_interps + 2)])
+    prog_bar.update_bar(0)  
     generated = sample(model_fn, sampler_args, latent_series, steps)
     return generated

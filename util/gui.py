@@ -174,6 +174,10 @@ def show_save_window(window, values):
     warnings = [[]]
     if values['mode'] in ('Variation', 'Interpolation') and values['alt_sigma']:
         warnings.append(create_warning('WARNING: Using alternative sigma func for variation/interp mode will not work!'))
+    if values['mode'] == 'Interpolation' and values['sampler'] != 'v-iplms':
+        warnings.append(create_warning('WARNING: Interpolations currently only work properly with the v-iplms sampler!'))
+    if values['sample_rate'] not in ['44100', '48000', '16000', '22050', '24000', '32000', '8000']:
+        warnings.append(create_warning(f'WARNING: Unusual sample rate detected: {values["sample_rate"]}!'))
 
 
     popup_layout = [
@@ -460,11 +464,14 @@ def generate(window, values):
         elif args.mode == 'Interpolation':
             audio = dd.interpolation_func(
                 args.batch_size, 
-                args.steps, model_fn, 
-                sampler_args, model_args, 
+                args.steps, 
+                model_fn, 
+                sampler_args, 
+                model_args, 
                 args.audio_source, 
                 args.audio_target, 
-                args.interpolations_linear
+                args.interpolations_linear,
+                args.noise_level
                 )
 
         results = save_audio(
