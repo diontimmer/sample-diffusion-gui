@@ -1,6 +1,5 @@
 from util.gui import *
 from gui_train import show_trainer
-import diffusion_library.sampler as samplerhook
 
 sg.theme('DarkGrey7')   # Add a touch of color
 
@@ -8,7 +7,7 @@ loaded_models = get_models()
 
 tree_layout = [
                 [sg.Button('Play Selection'), sg.Button('Save Selection'), sg.Button('Load Selection As Variation'), sg.T('Preview Volume: '), sg.Slider(range=(0, 100), orientation='h', size=(50, 20), enable_events=True, key="-VOLUME-", default_value=100)],
-                [sg.Tree(data=treedata, key='file_tree', headings=[], auto_size_columns=True, enable_events=True, show_expanded=True, expand_x=True, row_height=30)]
+                [sg.Tree(data=sg.TreeData(), key='file_tree', headings=[], auto_size_columns=True, enable_events=True, show_expanded=True, expand_x=True, row_height=30)]
                 ]
 
 settings_header = [
@@ -20,39 +19,45 @@ settings_header = [
                     [sg.T('Total output files: 1', tooltip='Batch Loop * Internal Batch Size', key='batch_viewer')]]
 settings_row_1 = [
                     [sg.T('Custom Batch Name', tooltip='Custom batch name for filenames.'), sg.InputText('', key='custom_batch_name', enable_events=True)],
-                    [sg.Checkbox('Use Autocast', default=default_settings['use_autocast'], key='use_autocast')],
-                    [sg.Checkbox('Use Autocrop', default=default_settings['use_autocrop'], key='use_autocrop', tooltip='Use autocrop (automatically crops audio provided to chunk size).')],
-                    [sg.T('Device Offload', tooltip='Device to store models when not in use.'), sg.Combo(['cpu', 'gpu'], default_value=default_settings['device_offload'], key='device_offload')],
                     [sg.T('Sample Rate', tooltip='  The samplerate the model was trained on.'), sg.InputText(default_settings['sample_rate'], key='sample_rate', size=(15,0), enable_events=True)],
                     [sg.T('Chunk Size', tooltip='The native chunk size of the model.'), sg.InputText(default_settings['chunk_size'], key='chunk_size', size=(15,0), enable_events=True), sg.T('', key='total_seconds')],
                     [sg.T('Seed', tooltip='The seed used for reproducable outputs. -1 for random seed.'), sg.InputText(default_settings['seed'], key='seed', size=(15,0))],
-                    [sg.T('Noise Level', tooltip='The noise level (used for variations & interpolations).'), sg.InputText(default_settings['noise_level'], key='noise_level', size=(15,0))]]
-
-settings_row_2 = [
+                    [sg.T('Noise Level', tooltip='The noise level (used for variations & interpolations).'), sg.InputText(default_settings['noise_level'], key='noise_level', size=(15,0))],
+                    [sg.T('Steps', tooltip='The number of steps for the sampler.'), sg.InputText(default_settings['steps'], key='steps', size=(15,0))],
+                    [sg.T('Secondary Model File', tooltip='Secondary model file used for merging.'), sg.Combo(loaded_models, key='secondary_model', default_value='', enable_events=True,)],
+                    [sg.T('Secondary Merge Ratio', tooltip='Merge ratio for model merging [A-B] -> [0-1]'), sg.InputText('0.5', key='merge_ratio', size=(15,0), enable_events=True)],
                     [sg.T('Input Audio Path', tooltip='Path to audio (used for variations & interpolations).'), sg.InputText(default_settings['audio_source'], key='audio_source'), sg.FileBrowse(file_types=(('Audio Files', '*.wav'),))],
                     [sg.T('Interp Audio Target Path', tooltip='Path to the audio target (used for interpolations).'), sg.InputText(default_settings['audio_target'], key='audio_target'), sg.FileBrowse(file_types=(('Audio Files', '*.wav'),))],
-                    [sg.T('Interp Steps', tooltip='The number of interpolations.'), sg.InputText(default_settings['interpolations_linear'], key='interpolations_linear', size=(15,0))],
-                    [sg.Checkbox('Tame', default=default_settings['tame'], key='tame', tooltip='Decrease output by 3db, then clip.')],
-                    [sg.T('Steps', tooltip='The number of steps for the sampler.'), sg.InputText(default_settings['steps'], key='steps', size=(15,0))],
-                    [sg.T('Sampler', tooltip='The sampler used for the diffusion model.'), sg.Combo(['IPLMS', 'DDPM', 'DDIM'], default_value=default_settings['sampler'], key='sampler')],
-                    [sg.T('Schedule Setting', tooltip='The schedule used for the diffusion model.'), sg.Combo(['CrashSchedule', 'LinearSchedule', 'DDPMSchedule', 'SplicedDDPMCosineSchedule', 'LogSchedule'], default_value=default_settings['schedule'], key='schedule')],
-                    [sg.T('Secondary Model File', tooltip='Secondary model file used for merging.'), sg.Combo(loaded_models, key='secondary_model', default_value='', enable_events=True,)],
-                    [sg.T('Secondary Merge Ratio', tooltip='Merge ratio for model merging [A-B] -> [0-1]'), sg.InputText('0.5', key='merge_ratio', size=(15,0), enable_events=True)]]
-buttons =           [sg.Button('Generate'), sg.Button('Import Model'), sg.Button('Train')]
+                    [sg.T('Interp Steps', tooltip='The number of interpolations.'), sg.InputText(default_settings['interpolations_linear'], key='interpolations_linear', size=(5,0))],
+                    ]
+
+settings_row_2 = [
+                    [sg.T('Sampler', tooltip='The sampler used for the diffusion model.'), sg.Combo(['v-ddim', 'v-iplms', 'k-heun', 'k-lms', 'k-dpmpp_2s_ancestral', 'k-dpm-2', 'k-dpm-fast', 'k-dpm-adaptive'], default_value='v-iplms', key='sampler')],
+                    [sg.T('V-ETA'), sg.InputText('0', key='ddim_eta', size=(5,0))],
+                    [sg.T('K-Beta D'), sg.InputText('19.9', key='beta_d', size=(7,0))],
+                    [sg.T('K-Beta Min'), sg.InputText('0.1', key='beta_min', size=(7,0))],
+                    [sg.T('K-RHO'), sg.InputText('7', key='rho', size=(5,0))],
+                    [sg.T('K-adaptive-RTOL'), sg.InputText('0.01', key='rtol', size=(5,0))],
+                    [sg.T('K-adaptive-ATOL'), sg.InputText('0.01', key='atol', size=(5,0))],
+                    ]
+
+loading_gif_img = sg.Image(background_color=sg.theme_background_color(), key='-LOADINGGIF-')
+
+buttons =           [sg.Button('Generate'), sg.Button('Import Model'), sg.Button('Train'), loading_gif_img]
 
 
 
 window = sg.Window('Vextra Sample Diffusion', [
     [sg.Frame('Preview', tree_layout)],
     [sg.Sizer(0, 10)], 
-    settings_header,
+    [sg.Frame('Main Settings', settings_header)],
     [sg.Sizer(0, 10)],  
-    [sg.Frame('Settings', [[sg.Column(settings_row_1), sg.Column(settings_row_2)]])],
-    [sg.ProgressBar(100, size=(0, 30), expand_x=True, key='progbar')], 
+    [sg.Frame('Additional Settings', [[sg.Column(settings_row_1)]], vertical_alignment='top'), sg.Frame('Sampler Settings', [[sg.Column(settings_row_2)]], vertical_alignment='top')],
     buttons,
     ], finalize=True, icon='util/data/dtico.ico', enable_close_attempted_event=True, resizable=False)
 window['file_tree'].bind('<Double-Button-1>', '_double_clicked')
-samplerhook.window = window
+window['-LOADINGGIF-'].update(visible=False)
+
 
 # init
 load_settings(window)
@@ -61,8 +66,8 @@ set_total_output(window)
 set_total_seconds(window)
 
 while True:
-    event, values = window.read()
-
+    event, values = window.read(timeout=10)
+    loading_gif_img.update_animation(LOADING_GIF_B64, time_between_frames=50)
     if event in (sg.WINDOW_CLOSE_ATTEMPTED_EVENT, 'Exit'):
         save_settings(values)
         break

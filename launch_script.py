@@ -90,7 +90,8 @@ post_torch_packages = [
                         "matplotlib",
                         "pandas",
                         "librosa",
-                        "tqdm"
+                        "tqdm",
+                        "k-diffusion"
                         ]
 
 
