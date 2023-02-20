@@ -17,6 +17,7 @@ from dance_diffusion import *
 import argparse
 import json
 from pydub import AudioSegment, effects
+import subprocess
 
 # block pygame welcome message
 
@@ -75,6 +76,8 @@ def insert_results_to_tree(batchname, results, window):
 
 def play_audio(path):
     global current_sound_channel
+    if '_X' in path:
+        return
     try:
         song = mixer.Sound(path)
         current_sound_channel.play(song)
@@ -435,6 +438,17 @@ def get_args_from_window(values):
     args.audio_source = values['audio_source'] if os.path.exists(values['audio_source']) else None
     return args
 
+def open_in_finder(path):
+    if sys.platform.startswith('win'):
+        subprocess.Popen(['explorer', '/select,', os.path.abspath(path)])
+    elif sys.platform.startswith('darwin'):
+        # Use subprocess to open Finder and select the file
+        subprocess.Popen(['open', '-R', path])
+    elif sys.platform.startswith('linux'):
+        # Use subprocess to open the file manager and select the file
+        subprocess.Popen(['xdg-open', '--select', path])
+    else:
+        print(f"Unsupported platform: {sys.platform}")
 
 def generate(window, values):
     window['Generate'].update(disabled=True)

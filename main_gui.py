@@ -6,7 +6,7 @@ sg.theme('DarkGrey7')   # Add a touch of color
 loaded_models = get_models()
 
 tree_layout = [
-                [sg.Button('Play Selection'), sg.Button('Save Selection'), sg.Button('Load Selection As Variation'), sg.T('Preview Volume: '), sg.Slider(range=(0, 100), orientation='h', size=(50, 20), enable_events=True, key="-VOLUME-", default_value=100)],
+                [sg.Button('Play'), sg.Button('Save'), sg.Button('Locate'), sg.Button('Load As Input'), sg.T('Preview Volume: '), sg.Slider(range=(0, 100), orientation='h', size=(50, 20), enable_events=True, key="-VOLUME-", default_value=100)],
                 [sg.Tree(data=sg.TreeData(), key='file_tree', headings=[], auto_size_columns=True, enable_events=True, show_expanded=True, expand_x=True, row_height=30)]
                 ]
 
@@ -92,13 +92,16 @@ while True:
         set_volume(values['-VOLUME-'])
 
     if len(values['file_tree']) > 0:
-        if event in ('file_tree_double_clicked', 'Play Selection'):
+        if event in ('file_tree_double_clicked', 'Play'):
             play_audio(values['file_tree'][0])
 
-        if event == 'Save Selection':
+        if event == 'Save':
             Thread(target=copysave, args=(values, )).start()
 
-        if event == 'Load Selection As Variation':
+        if event == 'Locate':
+            open_in_finder(values['file_tree'][0])
+
+        if event == 'Load As Input':
             try:
                 window['audio_source'].update(value=values['file_tree'][0])
                 window['mode'].update(value='Variation')
