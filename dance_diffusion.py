@@ -114,12 +114,13 @@ def create_model(args):
     return model_fn
 
 
-def create_sampler_args(sampler_type, eta, beta_d, beta_min, rho, rtol, atol):
+def create_sampler_args(sampler_type, eta, alt_sigma, sigma_min, sigma_max, rho, rtol, atol):
     args = Object()
     args.sampler_type = sampler_type
     args.eta = eta
-    args.beta_d = beta_d
-    args.beta_min = beta_min
+    args.alt_sigma = alt_sigma
+    args.sigma_min = sigma_min
+    args.sigma_max = sigma_max
     args.rho = rho
     args.rtol = rtol
     args.atol = atol
@@ -130,7 +131,10 @@ def sample(model_fn, sampler_args, noise, steps=100, noise_level = 1.0):
   global step_size
   if sampler_args.sampler_type.startswith('k-'):
     denoiser = K.external.VDenoiser(model_fn)
-    sigmas = get_sigmas_vp(steps, sampler_args.beta_d, sampler_args.beta_min, eps_s=1e-3, device=device).half()
+    if sampler_args.alt_sigma:
+      sigmas = get_sigmas_vp(steps, 19.9, 0.1, eps_s=1e-3, device=device).half()
+    else:
+      sigmas = K.sampling.get_sigmas_karras(steps, sampler_args.sigma_min, noise_level, sampler_args.rho, device=device)
     step_size = 100 / len(range(len(sigmas) - 1))
 
   elif sampler_args.sampler_type.startswith("v-"):
@@ -173,7 +177,10 @@ def resample(model_fn, sampler_args, audio, chunk_size, steps=100, noise_level =
   elif sampler_args.sampler_type.startswith("k-"):
     denoiser = K.external.VDenoiser(model_fn)
     noised = audio + torch.randn_like(audio) * noise_level
-    sigmas = get_sigmas_vp(steps, sampler_args.beta_d, sampler_args.beta_min, eps_s=1e-3, device=device).half()
+    if sampler_args.alt_sigma:
+      sigmas = get_sigmas_vp(steps, 19.9, 0.1, eps_s=1e-3, device=device).half()
+    else:
+      sigmas = K.sampling.get_sigmas_karras(steps, sampler_args.sigma_min, noise_level, sampler_args.rho, device=device)
     step_size = 100 / len(range(len(sigmas) - 1))
 
   # Denoise
@@ -221,8 +228,11 @@ def reverse_sample(model_fn, model_args, sampler_args, audio_samples, steps=100,
 
   elif sampler_args.sampler_type.startswith("k-"):
     denoiser = K.external.VDenoiser(model_fn)
-    sigmas = get_sigmas_vp(steps, sampler_args.beta_d, sampler_args.beta_min, eps_s=1e-3, device=device).half()
-    step_size = 100 / len(range(len(sigmas) - 1))
+    if sampler_args.alt_sigma:
+      sigmas = get_sigmas_vp(steps, 19.9, 0.1, eps_s=1e-3, device=device).half()
+    else:
+      sigmas = K.sampling.get_sigmas_karras(steps, sampler_args.sigma_min, noise_level, sampler_args.rho, device=device)
+      step_size = 100 / len(range(len(sigmas) - 1))
 
   # Denoise
   if sampler_args.sampler_type == "k-heun":

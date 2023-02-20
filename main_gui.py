@@ -33,8 +33,9 @@ settings_row_1 = [
 settings_row_2 = [
                     [sg.T('Sampler', tooltip='The sampler used for the diffusion model.'), sg.Combo(['v-ddim', 'v-iplms', 'k-heun', 'k-lms', 'k-dpmpp_2s_ancestral', 'k-dpm-2', 'k-dpm-fast', 'k-dpm-adaptive'], default_value='v-iplms', key='sampler')],
                     [sg.T('V-ETA'), sg.InputText('0', key='ddim_eta', size=(5,0))],
-                    [sg.T('K-Beta D'), sg.InputText('19.9', key='beta_d', size=(7,0))],
-                    [sg.T('K-Beta Min'), sg.InputText('0.1', key='beta_min', size=(7,0))],
+                    [sg.Checkbox('K-Alt Sigma Function', default=False, key='alt_sigma', enable_events=True)],
+                    [sg.T('K-Sigma Min', key='smintext'), sg.InputText('0.0001', key='sigma_min', size=(7,0), disabled_readonly_background_color='DarkGrey')],
+                    [sg.T('K-Sigma Max', key='smaxtext'), sg.InputText('80', key='sigma_max', size=(7,0), disabled_readonly_background_color='DarkGrey')],
                     [sg.T('K-RHO'), sg.InputText('7', key='rho', size=(5,0))],
                     [sg.T('K-adaptive-RTOL'), sg.InputText('0.01', key='rtol', size=(5,0))],
                     [sg.T('K-adaptive-ATOL'), sg.InputText('0.01', key='atol', size=(5,0))],
@@ -82,6 +83,9 @@ while True:
 
     if event == 'Import Model':
         load_model(window)
+
+    if event == 'alt_sigma':
+        update_sigma(window, bool(values['alt_sigma']))
 
     if event == 'model':
         apply_model_params(window, values['model'])
