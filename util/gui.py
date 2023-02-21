@@ -503,14 +503,14 @@ def generate(window, values):
             modelname=model_args.model_name, 
             custom_batch_name=args.custom_batch_name)
         insert_results_to_tree(batch_name, results, window)
-        if args.gen_wave != 'None':
-            os.remove(args.audio_source)
         empty_cache()
         gc.collect()
 
     print('Process Finished!')
     if os.path.exists('models/sec_mrg_buffer.ckpt'):
         os.remove('models/sec_mrg_buffer.ckpt')
+    if args.gen_wave != 'None':
+        os.remove(args.audio_source)
     window['Generate'].update(disabled=False)
     window['-LOADINGGIF-'].update(visible=False)
 
