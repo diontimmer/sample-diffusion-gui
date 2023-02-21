@@ -32,3 +32,5 @@ def create_signal(keys, sample_rate, sample_length, amplitude=100, waveform='sin
     for s in awave:
         wav_file.writeframes(struct.pack('h', int(s*amplitude)))
     return filename
+
+#create_signal(['C3', 'E3', 'G3'], 44100, 44100, amplitude=100, waveform='Sine', output_folder='output')

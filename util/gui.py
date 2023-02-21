@@ -381,6 +381,16 @@ def get_args_from_window(values):
         args.audio_source = values['audio_source']
     return args
 
+def preview_keys(window, values):
+    if values['gen_wave'] != 'None':
+        window['-LOADINGGIF-'].update(visible=True)
+        window['Preview Keys'].update(disabled=True)
+        preview = create_signal(values['gen_keys'].split(', '), int(values['sample_rate']), int(eval(str(values['chunk_size']))), float(values['gen_amp']), values['gen_wave'], 'tmp')
+        play_audio(preview)
+        window['-LOADINGGIF-'].update(visible=False)
+        window['Preview Keys'].update(disabled=False)
+        os.remove(preview)
+
 def open_in_finder(path):
     if sys.platform.startswith('win'):
         subprocess.Popen(['explorer', '/select,', os.path.abspath(path)])
