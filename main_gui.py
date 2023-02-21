@@ -24,8 +24,11 @@ settings_row_1 = [
                     [sg.T('Noise Level', tooltip='The noise level (used for variations & interpolations).'), sg.InputText(default_settings['noise_level'], key='noise_level', size=(15,0))],
                     [sg.T('Steps', tooltip='The number of steps for the sampler.'), sg.InputText(default_settings['steps'], key='steps', size=(15,0))],
                     [sg.T('Secondary Model File', tooltip='Secondary model file used for merging.'), sg.Combo([], key='secondary_model', default_value='None', enable_events=True, size=(30,0))],
-                    [sg.T('Secondary Merge Ratio', tooltip='Merge ratio for model merging [A-B] -> [0-1]'), sg.InputText('0.5', key='merge_ratio', size=(15,0), enable_events=True)],
-                    [sg.T('Input Audio Path', tooltip='Path to audio (used for variations & interpolations).'), sg.InputText(default_settings['audio_source'], key='audio_source'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),))],
+                    [sg.T('Secondary Merge Ratio', tooltip='Merge ratio for model merging [A-B] -> [0-1]'), sg.InputText('0.5', key='merge_ratio', size=(15,0), enable_events=True)],                    
+                    [sg.T('Input Audio Path', key='ipathtext', tooltip='Path to audio (used for variations & interpolations).'), sg.InputText(default_settings['audio_source'], key='audio_source', disabled_readonly_background_color='DarkGrey'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),))],
+                    [sg.T('Generate Wave Input', tooltip='Generate wave for input (used for variations & interpolations).'), sg.Combo(['Sine', 'Square', 'Saw', 'None'], default_value=default_settings['gen_wave'], key='gen_wave', enable_events=True)],
+                    [sg.T('Generate Wave Keys', tooltip='Key schedule for the wave generation. (Separate by , !)'), sg.InputText(default_settings['gen_keys'], key='gen_keys')],
+                    [sg.T('Generate Wave Amplitude', tooltip='Amp for the generated wave.'), sg.InputText(default_settings['gen_amp'], key='gen_amp', size=(15,0))],
                     [sg.T('Interp Audio Target Path', tooltip='Path to the audio target (used for interpolations).'), sg.InputText(default_settings['audio_target'], key='audio_target'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),))],
                     [sg.T('Interp Steps', tooltip='The number of interpolations.'), sg.InputText(default_settings['interpolations_linear'], key='interpolations_linear', size=(5,0))],
                     ]
@@ -86,6 +89,9 @@ while True:
 
     if event == 'alt_sigma':
         update_sigma(window, bool(values['alt_sigma']))
+
+    if event == 'gen_wave':
+        update_input_path(window, values['gen_wave'] != 'None')
 
     if event == 'model':
         apply_model_params(window, values['model'])

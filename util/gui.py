@@ -5,6 +5,7 @@ from threading import Thread
 import re
 from util.scripts.trim_model import start_trim, prune_latent_uncond
 from util.scripts.note_detect import detect_notes
+from util.scripts.generate_wave import create_signal
 from util.scripts.merge_models_ratio import ratio_merge
 import torch
 import torchaudio
@@ -96,6 +97,7 @@ def load_settings(window):
         with open('saved_settings.pickle', 'rb') as f:
             saved_settings = pickle.load(f)
         update_sigma(window, saved_settings['alt_sigma'])
+        update_input_path(window, saved_settings['gen_wave'] != 'None')
         for key in saved_settings:
             if key not in not_load:
                 try:
@@ -156,10 +158,13 @@ def update_sigma(window, alt_sigma_on):
     window['smintext'].update(text_color=text_color if not alt_sigma_on else 'grey')
     window['smaxtext'].update(text_color=text_color if not alt_sigma_on else 'grey')
 
+def update_input_path(window, gen_wave_on):
+    text_color = sg.theme_text_color()
+    window['audio_source'].update(disabled=gen_wave_on)
+    window['ipathtext'].update(text_color=text_color if not gen_wave_on else 'grey')
 
-
-def create_warning(text):
-    return [[sg.Text(text, text_color='red')]]
+def create_warning(text, color='red'):
+    return [[sg.Text(text, text_color=color)]]
 
 def show_save_window(window, values):
     # create the layout
@@ -178,7 +183,8 @@ def show_save_window(window, values):
         warnings.append(create_warning('WARNING: Interpolations currently only work properly with the v-iplms sampler!'))
     if values['sample_rate'] not in ['44100', '48000', '16000', '22050', '24000', '32000', '8000']:
         warnings.append(create_warning(f'WARNING: Unusual sample rate detected: {values["sample_rate"]}!'))
-
+    if values['gen_wave'] != 'None' and values['mode'] in ('Variation', 'Interpolation'):
+        warnings.append(create_warning(f'Wave gen variation enabled: {values["gen_wave"]}', color='orange'))
 
     popup_layout = [
         [sg.Text(f'Some processes can be lengthy, please ensure your settings are correct!', font='Arial 12', text_color='yellow')],
@@ -269,6 +275,9 @@ def get_args_object():
     args_object.output_path = None
     args_object.model_name = None
     args_object.custom_batch_name = None
+    args_object.gen_wave = 'None'
+    args_object.gen_keys = 'C4, C5, C6'
+    args_object.gen_amp = 100
     return args_object
 
 
@@ -390,11 +399,12 @@ def generate(window, values):
     args = get_args_from_window(values)
 
     # check paths
-    if args.mode in ('Variation', 'Interpolation') and args.audio_source is None:
-        print('Please select an audio source for variation mode.')
-        window['Generate'].update(disabled=False)
-        window['-LOADINGGIF-'].update(visible=False)
-        return
+    if args.mode in ('Variation', 'Interpolation'):
+        if args.audio_source is None and args.gen_wave == 'None':
+            print('Please select an audio source or wave gen for variation mode.')
+            window['Generate'].update(disabled=False)
+            window['-LOADINGGIF-'].update(visible=False)
+            return
 
     if args.mode == 'Interpolation' and args.audio_target is None:
         print('Please select an audio target for interpolation mode.')
@@ -429,7 +439,8 @@ def generate(window, values):
         )
 
     model_fn = dd.create_model(model_args)
-
+    if args.gen_wave != 'None':
+        args.audio_source = create_signal(args.gen_keys.split(', '), model_args.sample_rate, int(model_args.sample_size) * 2, args.gen_amp, args.gen_wave, 'tmp')
     seed = args.seed if(args.seed!=-1) else torch.randint(0, 4294967294, [1], device='cuda').item()
 
     if not args.custom_batch_name:
@@ -482,6 +493,8 @@ def generate(window, values):
             modelname=model_args.model_name, 
             custom_batch_name=args.custom_batch_name)
         insert_results_to_tree(batch_name, results, window)
+        if args.gen_wave != 'None':
+            os.remove(args.audio_source)
         empty_cache()
         gc.collect()
 
