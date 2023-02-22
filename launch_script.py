@@ -143,4 +143,4 @@ if __name__ == "__main__":
                     prRed('No FFMPEG detected! Please use homebrew "brew install ffmpeg" to install before using the GUI!')
                     exit()
     # LAUNCH
-    run(f'"{sys.executable}" {main_script_path}', "Starting main script..", "Couldn't start main script!", live=True)
+    run(f'"{sys.executable}" {main_script_path}', "Starting main script, this might take a bit..", "MAIN SCRIPT CRASH", live=True)
