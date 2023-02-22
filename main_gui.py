@@ -16,6 +16,7 @@ settings_header = [
                     [sg.T('Batch Loop', tooltip='The number of times the internal batch size will loop.'), sg.InputText('1', key='batch_loop', size=(15,0), enable_events=True)],
                     [sg.T('Internal Batch Size', tooltip='The maximal number of samples to be produced per batch.'), sg.InputText(default_settings['batch_size'], key='batch_size', size=(15,0), enable_events=True)],
                     [sg.T('Total output files: 1', tooltip='Batch Loop * Internal Batch Size', key='batch_viewer')]]
+
 settings_row_1 = [
                     [sg.T('Custom Batch Name', tooltip='Custom batch name for filenames.'), sg.InputText('', key='custom_batch_name', enable_events=True)],
                     [sg.T('Sample Rate', tooltip='  The samplerate the model was trained on.'), sg.InputText(default_settings['sample_rate'], key='sample_rate', size=(15,0), enable_events=True)],
@@ -33,6 +34,8 @@ settings_row_1 = [
                     [sg.T('Interp Steps', tooltip='The number of interpolations.'), sg.InputText(default_settings['interpolations_linear'], key='interpolations_linear', size=(5,0))],
                     ]
 
+
+
 settings_row_2 = [
                     [sg.T('Sampler', tooltip='The sampler used for the diffusion model.'), sg.Combo(['v-ddim', 'v-iplms', 'k-heun', 'k-lms', 'k-dpmpp_2s_ancestral', 'k-dpm-2', 'k-dpm-fast', 'k-dpm-adaptive'], default_value='v-iplms', key='sampler')],
                     [sg.T('V-ETA'), sg.InputText('0', key='ddim_eta', size=(5,0))],
@@ -44,6 +47,8 @@ settings_row_2 = [
                     [sg.T('K-adaptive-ATOL'), sg.InputText('0.01', key='atol', size=(5,0))],
                     ]
 
+tabs = [sg.TabGroup([[sg.Tab('Main Settings', settings_header), sg.Tab('Additional Settings', settings_row_1), sg.Tab('Sampler Settings', settings_row_2)]], expand_x=True, expand_y=False)]
+
 loading_gif_img = sg.Image(background_color=sg.theme_background_color(), key='-LOADINGGIF-')
 
 buttons = [sg.Button('Generate'), sg.Button('Import Model'), sg.Button('Train'), loading_gif_img]
@@ -51,14 +56,13 @@ buttons = [sg.Button('Generate'), sg.Button('Import Model'), sg.Button('Train'),
 prog_bar = sg.ProgressBar(100, size=(0, 30), expand_x=True, key='progbar')
 
 window = sg.Window('Vextra Sample Diffusion', [
-    [sg.Frame('Preview', tree_layout)],
+    [sg.Frame('Preview', tree_layout, expand_x=True)],
     [sg.Sizer(0, 10)], 
-    [sg.Frame('Main Settings', settings_header, vertical_alignment='top'), sg.Frame('Sampler Settings', [[sg.Column(settings_row_2)]], vertical_alignment='top')],
     [sg.Sizer(0, 10)],
-    [sg.Frame('Additional Settings', [[sg.Column(settings_row_1)]], vertical_alignment='top')],
+    tabs,
     [prog_bar],  
     buttons,
-    ], finalize=True, icon='util/data/dtico.ico', enable_close_attempted_event=True, resizable=False)
+    ], finalize=True, icon='util/data/dtico.ico', enable_close_attempted_event=True, resizable=True)
 window['file_tree'].bind('<Double-Button-1>', '_double_clicked')
 window['-LOADINGGIF-'].update(visible=False)
 
