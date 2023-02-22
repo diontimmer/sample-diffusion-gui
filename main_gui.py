@@ -61,7 +61,7 @@ buttons = [sg.Button('Generate'), sg.Button('Import Model'), sg.Button('Train'),
 prog_bar = sg.ProgressBar(100, size=(0, 30), expand_x=True, key='progbar')
 
 window = sg.Window('Harmonai Sample Diffusion', [
-    [sg.Titlebar(title='Harmonai Sample Diffusion', icon='util/data/dtico.png')],
+    [sg.Titlebar(title='', icon='util/data/dtico.png')],
     [sg.Frame('Preview', tree_layout, expand_x=True, expand_y=True)],
     tabs,
     [prog_bar],  
