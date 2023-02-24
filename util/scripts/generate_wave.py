@@ -25,7 +25,7 @@ def create_signal(keys, sample_rate, sample_length, amplitude=100, waveform='sin
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    filename = f'{output_folder}/{waveform}_{"_".join(keys)}_{sample_rate}hz_n{sample_length}.wav'
+    filename = f'{output_folder}/{waveform}_{"_".join(keys)}.wav'
     wav_file=wave.open(filename, 'w')
     wav_file.setparams((2, 2, int(sample_rate), sample_length, "NONE", "not compressed"))
 

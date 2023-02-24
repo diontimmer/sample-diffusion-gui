@@ -161,7 +161,9 @@ def update_sigma(window, alt_sigma_on):
 def update_input_path(window, gen_wave_on):
     text_color = sg.theme_text_color()
     window['audio_source'].update(disabled=gen_wave_on)
+    window['audio_source_folder'].update(disabled=gen_wave_on)
     window['ipathtext'].update(text_color=text_color if not gen_wave_on else 'grey')
+    window['fpathtext'].update(text_color=text_color if not gen_wave_on else 'grey')
 
 def create_warning(text, color='red'):
     return [[sg.Text(text, text_color=color)]]
@@ -186,6 +188,8 @@ def show_save_window(window, values):
         warnings.append(create_warning(f'WARNING: Unusual sample rate detected: {values["sample_rate"]}!'))
     if values['gen_wave'] != 'None' and values['mode'] in ('Variation', 'Interpolation'):
         warnings.append(create_warning(f'Wave gen variation enabled: {values["gen_wave"]}', color='orange'))
+    if values['gen_wave'] == 'None' and values['mode'] == 'Variation' and values['audio_source_folder'] is not None:
+        warnings.append(create_warning(f'Batch folder variation enabled: {values["audio_source_folder"]}', color='orange'))
     if values['secondary_model'] != 'None' :
         warnings.append(create_warning(f'Secondary model merge enabled: {values["secondary_model"]} * {values["merge_ratio"]}', color='orange'))
     try:
@@ -250,14 +254,6 @@ def get_models():
         models = ['No models found, please load ckpt with tool.']
     return models
 
-def str2bool(value):
-    if value.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif value.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
-
 def get_args_object():
     args_object = Object()
     args_object.model = 'models/dd/model.ckpt'
@@ -267,6 +263,7 @@ def get_args_object():
     args_object.seed = -1
     args_object.batch_size = 1
     args_object.audio_source = None
+    args_object.audio_source_folder = None
     args_object.audio_target = None
     args_object.noise_level = 0.7
     args_object.interpolations_linear = 3
@@ -280,22 +277,8 @@ def get_args_object():
     args_object.gen_amp = 100
     return args_object
 
-
-def extract_percentage(output):
-    if output:
-        last_percentage = None
-        for match in re.finditer(r'\d+%', output):
-            last_percentage = int(match.group(0).strip('%'))
-        return last_percentage
-    else:
-        return None
-
-def save_audio(audio_out, output_path: str, sample_rate, id_str:str = None, modelname='Sample', custom_batch_name=None):
+def save_audio(audio_out, output_folder: str, sample_rate, id_str:str = None, modelname='Sample', custom_batch_name=None):
     saved_paths = []
-    if custom_batch_name:
-        output_folder = os.path.join(output_path, custom_batch_name)
-    else:
-        output_folder = os.path.join(output_path, modelname)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
@@ -410,10 +393,11 @@ def generate(window, values):
     window['Generate'].update(disabled=True)
     window['-LOADINGGIF-'].update(visible=True)
     args = get_args_from_window(values)
+    varlist = [args.audio_source]
 
     # check paths
     if args.mode in ('Variation', 'Interpolation'):
-        if args.audio_source is None and args.gen_wave == 'None':
+        if args.audio_source is None and args.gen_wave == 'None' and args.audio_source_folder is None:
             print('Please select an audio source or wave gen for variation mode.')
             window['Generate'].update(disabled=False)
             window['-LOADINGGIF-'].update(visible=False)
@@ -453,40 +437,72 @@ def generate(window, values):
 
     model_fn = dd.create_model(model_args)
     if args.gen_wave != 'None':
-        args.audio_source = create_signal(args.gen_keys.split(', '), model_args.sample_rate, int(model_args.sample_size) * 2, args.gen_amp, args.gen_wave, 'tmp')
+        varlist = [create_signal(args.gen_keys.split(', '), model_args.sample_rate, int(model_args.sample_size) * 2, args.gen_amp, args.gen_wave, 'tmp')]
+
+    elif args.audio_source_folder is not None:
+        varlist = [os.path.join(args.audio_source_folder, audio) for audio in os.listdir(args.audio_source_folder) if audio.endswith('.wav')]
+
     seed = args.seed if(args.seed!=-1) else torch.randint(0, 4294967294, [1], device='cuda').item()
 
     if not args.custom_batch_name:
-        save_name = seed
+        output_folder = f"{str(args.output_path)}\\{str(args.mode)}\\{str(args.modelname)}"
     else:
-        save_name = f"{args.custom_batch_name}_{seed}"
+        output_folder = f"{str(args.output_path)}\\{str(args.mode)}\\{str(args.custom_batch_name)}"
+
+
+
+
 
     for i in range(int(values['batch_loop'])):
         print(f'Processing loop {i+1}/{values["batch_loop"]}')
-        window['progbar'].update_bar(0)
 
         if args.mode == 'Generation':
-            audio = dd.generate_func(
+            window['progbar'].update_bar(0)
+            data = dd.generate_func(
                 args.batch_size, 
                 args.steps, 
                 model_fn, 
                 sampler_args, 
                 model_args
                 )
+            results = save_audio(
+                data, 
+                output_folder=output_folder, 
+                sample_rate=model_args.sample_rate, 
+                id_str=seed, 
+                modelname=model_args.model_name, 
+                custom_batch_name=args.custom_batch_name)
+
+
 
         elif args.mode == 'Variation':
-            audio = dd.variation_func(
-                args.batch_size, 
-                args.steps, 
-                model_fn, 
-                sampler_args, 
-                model_args, 
-                args.noise_level, 
-                args.audio_source
-                )
+            results = []
+            for var_job in varlist:
+                window['progbar'].update_bar(0)
+                print('Processing variation job on: ' + var_job)
+                data = dd.variation_func(
+                    args.batch_size, 
+                    args.steps, 
+                    model_fn, 
+                    sampler_args, 
+                    model_args, 
+                    args.noise_level, 
+                    var_job
+                    )
+                save_name = os.path.splitext(os.path.basename(var_job))[0]
+                results += save_audio(
+                    data, 
+                    output_folder=output_folder, 
+                    sample_rate=model_args.sample_rate, 
+                    id_str=save_name, 
+                    modelname=model_args.model_name, 
+                    custom_batch_name=args.custom_batch_name)
+
+
 
         elif args.mode == 'Interpolation':
-            audio = dd.interpolation_func(
+            window['progbar'].update_bar(0)
+            data = dd.interpolation_func(
                 args.batch_size, 
                 args.steps, 
                 model_fn, 
@@ -497,14 +513,13 @@ def generate(window, values):
                 args.interpolations_linear,
                 args.noise_level
                 )
-
-        results = save_audio(
-            audio, 
-            output_path=f"{str(args.output_path)}\\{str(args.mode)}", 
-            sample_rate=model_args.sample_rate, 
-            id_str=save_name, 
-            modelname=model_args.model_name, 
-            custom_batch_name=args.custom_batch_name)
+            results = save_audio(
+                data, 
+                output_folder=output_folder, 
+                sample_rate=model_args.sample_rate, 
+                id_str=seed, 
+                modelname=model_args.model_name, 
+                custom_batch_name=args.custom_batch_name)
         insert_results_to_tree(batch_name, results, window)
         empty_cache()
         gc.collect()
@@ -513,7 +528,7 @@ def generate(window, values):
     if os.path.exists('models/sec_mrg_buffer.ckpt'):
         os.remove('models/sec_mrg_buffer.ckpt')
     if args.gen_wave != 'None':
-        os.remove(args.audio_source)
+        os.remove(varlist[0])
     window['Generate'].update(disabled=False)
     window['-LOADINGGIF-'].update(visible=False)
 

@@ -18,18 +18,19 @@ settings_main = sg.Column([
                     [sg.T('Model File', tooltip='Path to the model checkpoint file to be used.'), sg.Combo([], key='model', default_value='', enable_events=True, size=(30,0))],
                     [sg.T('Mode', tooltip='The mode of operation'), sg.Combo(['Generation', 'Interpolation', 'Variation'], default_value=default_settings['mode'], key='mode')],
                     [sg.T('Output Path', tooltip='Path for output renders.'), sg.InputText('output', key='output_path'), sg.FolderBrowse()],
-                    [sg.T('Batch Loop', tooltip='The number of times the internal batch size will loop.'), sg.InputText('1', key='batch_loop', size=(15,0), enable_events=True)],
+                    [sg.T('Batch Loop', tooltip='The number of times the internal batch size will loop.'), sg.InputText('1', key='batch_loop', size=(8,0), enable_events=True)],
                     [sg.T('Internal Batch Size', tooltip='The maximal number of samples to be produced per batch.'), sg.InputText(default_settings['batch_size'], key='batch_size', size=(15,0), enable_events=True), sg.T('Total output files: 1', tooltip='Batch Loop * Internal Batch Size', key='batch_viewer', text_color='yellow')],
-                    [sg.T('Custom Batch Name', tooltip='Custom batch name for filenames.'), sg.InputText('', key='custom_batch_name', enable_events=True)],
-                    [sg.T('Sample Rate', tooltip='  The samplerate the model was trained on.'), sg.InputText(default_settings['sample_rate'], key='sample_rate', size=(15,0), enable_events=True)],
-                    [sg.T('Chunk Size', tooltip='The native chunk size of the model.'), sg.InputText(default_settings['chunk_size'], key='chunk_size', size=(15,0), enable_events=True), sg.T('', key='total_seconds')],
-                    [sg.T('Seed', tooltip='The seed used for reproducable outputs. -1 for random seed.'), sg.InputText(default_settings['seed'], key='seed', size=(15,0))],
+                    [sg.T('Custom Batch Name', tooltip='Custom batch name for filenames.'), sg.InputText('', key='custom_batch_name', size=(15,0), enable_events=True)],
+                    [sg.T('Sample Rate', tooltip='  The samplerate the model was trained on.'), sg.InputText(default_settings['sample_rate'], key='sample_rate', size=(8,0), enable_events=True)],
+                    [sg.T('Chunk Size', tooltip='The native chunk size of the model.'), sg.InputText(default_settings['chunk_size'], key='chunk_size', size=(8,0), enable_events=True), sg.T('', key='total_seconds')],
+                    [sg.T('Seed', tooltip='The seed used for reproducable outputs. -1 for random seed.'), sg.InputText(default_settings['seed'], key='seed', size=(8,0))],
+                    [sg.T('Secondary Model File', tooltip='Secondary model file used for merging.'), sg.Combo([], key='secondary_model', default_value='None', enable_events=True, size=(30,0))],
+                    [sg.T('Secondary Merge Ratio', tooltip='Merge ratio for model merging [A-B] -> [0-1]'), sg.InputText('0.5', key='merge_ratio', size=(5,0), enable_events=True)],                    
                     ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
 
 settings_add = sg.Column([
-                    [sg.T('Secondary Model File', tooltip='Secondary model file used for merging.'), sg.Combo([], key='secondary_model', default_value='None', enable_events=True, size=(30,0))],
-                    [sg.T('Secondary Merge Ratio', tooltip='Merge ratio for model merging [A-B] -> [0-1]'), sg.InputText('0.5', key='merge_ratio', size=(15,0), enable_events=True)],                    
                     [sg.T('Input Audio Path', key='ipathtext', tooltip='Path to audio (used for variations & interpolations).'), sg.InputText(default_settings['audio_source'], key='audio_source', disabled_readonly_background_color='DarkGrey'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),))],
+                    [sg.T('Input Folder Path', key='fpathtext', tooltip='Path to folder containing audio (used for variations & interpolations).'), sg.InputText(default_settings['audio_source_folder'], key='audio_source_folder', disabled_readonly_background_color='DarkGrey'), sg.FolderBrowse()],
                     [sg.T('Generate Wave Input', tooltip='Generate wave for input (used for variations & interpolations).'), sg.Combo(['Sine', 'Square', 'Saw', 'None'], default_value=default_settings['gen_wave'], key='gen_wave', enable_events=True)],
                     [sg.T('Generate Wave Keys', tooltip='Key schedule for the wave generation. (Separate by , !)'), sg.InputText(default_settings['gen_keys'], key='gen_keys'), sg.Button('Preview Keys')],
                     [sg.T('Generate Wave Amplitude', tooltip='Amp for the generated wave.'), sg.InputText(default_settings['gen_amp'], key='gen_amp', size=(15,0))],
@@ -52,7 +53,7 @@ settings_sampler = sg.Column([
                     [sg.T('K-adaptive-ATOL'), sg.InputText('0.01', key='atol', size=(5,0))],
                     ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
 
-tabs = [sg.TabGroup([[sg.Tab('Main Settings', [[settings_main]]), sg.Tab('Additional Settings', [[settings_add]]), sg.Tab('Sampler Settings', [[settings_sampler]])]], expand_x=True, expand_y=True, key='tab_group')]
+tabs = [sg.TabGroup([[sg.Tab('Main Settings', [[settings_main]], expand_y=False), sg.Tab('Additional Settings', [[settings_add]]), sg.Tab('Sampler Settings', [[settings_sampler]])]], expand_x=True, expand_y=True, key='tab_group')]
 
 loading_gif_img = sg.Image(background_color=sg.theme_background_color(), key='-LOADINGGIF-')
 
@@ -70,7 +71,7 @@ window = sg.Window('Harmonai Sample Diffusion', [
     #prog_bar,  
     #buttons,
     [sg.Sizer(0, 10)], 
-    ], finalize=True, icon='util/data/dtico.ico', enable_close_attempted_event=True, resizable=True)
+    ], finalize=True, icon='util/data/dtico.ico', enable_close_attempted_event=True, resizable=True, size=(650,750))
 
 window.set_min_size((650,615))
 splash.close()
