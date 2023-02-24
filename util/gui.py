@@ -260,7 +260,6 @@ def get_args_object():
     args_object.sample_rate = 48000
     args_object.chunk_size = 65536
     args_object.mode = 'Generation'
-    args_object.seed = -1
     args_object.batch_size = 1
     args_object.audio_source = None
     args_object.audio_source_folder = None
@@ -356,7 +355,6 @@ def get_args_from_window(values):
     args.model = 'models/' + args.model
     model_filename = os.path.basename(args.model).split('.')[0]
     args.model_name = ''.join(model_filename.split('_')[:-2])
-    args.seed = int(args.seed)
     args.chunk_size = int(eval(str(args.chunk_size)))
     if values['audio_source'] == 'None' or not os.path.exists(values['audio_source']):
         args.audio_source = None
@@ -442,10 +440,12 @@ def generate(window, values):
     elif args.audio_source_folder is not None:
         varlist = [os.path.join(args.audio_source_folder, audio) for audio in os.listdir(args.audio_source_folder) if audio.endswith('.wav')]
 
-    seed = args.seed if(args.seed!=-1) else torch.randint(0, 4294967294, [1], device='cuda').item()
+    seed = torch.randint(0, 4294967294, [1], device='cuda').item()
+    generator = torch.Generator(device='cpu')
+    generator = generator.manual_seed(seed)
 
     if not args.custom_batch_name:
-        output_folder = f"{str(args.output_path)}\\{str(args.mode)}\\{str(args.modelname)}"
+        output_folder = f"{str(args.output_path)}\\{str(args.mode)}\\{str(args.model_name)}"
     else:
         output_folder = f"{str(args.output_path)}\\{str(args.mode)}\\{str(args.custom_batch_name)}"
 
@@ -463,7 +463,8 @@ def generate(window, values):
                 args.steps, 
                 model_fn, 
                 sampler_args, 
-                model_args
+                model_args,
+                generator
                 )
             results = save_audio(
                 data, 
@@ -487,7 +488,8 @@ def generate(window, values):
                     sampler_args, 
                     model_args, 
                     args.noise_level, 
-                    var_job
+                    var_job,
+                    generator
                     )
                 save_name = os.path.splitext(os.path.basename(var_job))[0]
                 results += save_audio(
@@ -511,7 +513,8 @@ def generate(window, values):
                 args.audio_source, 
                 args.audio_target, 
                 args.interpolations_linear,
-                args.noise_level
+                args.noise_level,
+                generator
                 )
             results = save_audio(
                 data, 

@@ -23,7 +23,7 @@ settings_main = sg.Column([
                     [sg.T('Custom Batch Name', tooltip='Custom batch name for filenames.'), sg.InputText('', key='custom_batch_name', size=(15,0), enable_events=True)],
                     [sg.T('Sample Rate', tooltip='  The samplerate the model was trained on.'), sg.InputText(default_settings['sample_rate'], key='sample_rate', size=(8,0), enable_events=True)],
                     [sg.T('Chunk Size', tooltip='The native chunk size of the model.'), sg.InputText(default_settings['chunk_size'], key='chunk_size', size=(8,0), enable_events=True), sg.T('', key='total_seconds')],
-                    [sg.T('Seed', tooltip='The seed used for reproducable outputs. -1 for random seed.'), sg.InputText(default_settings['seed'], key='seed', size=(8,0))],
+                    #[sg.T('Seed', tooltip='The seed used for reproducable outputs. -1 for random seed.'), sg.InputText(default_settings['seed'], key='seed', size=(8,0))],
                     [sg.T('Secondary Model File', tooltip='Secondary model file used for merging.'), sg.Combo([], key='secondary_model', default_value='None', enable_events=True, size=(30,0))],
                     [sg.T('Secondary Merge Ratio', tooltip='Merge ratio for model merging [A-B] -> [0-1]'), sg.InputText('0.5', key='merge_ratio', size=(5,0), enable_events=True)],                    
                     ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)

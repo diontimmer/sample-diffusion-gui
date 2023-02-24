@@ -160,7 +160,7 @@ def sample(model_fn, sampler_args, noise, steps=100, noise_level = 1.0):
   elif sampler_args.sampler_type == "k-dpm-adaptive":
     return K.sampling.sample_dpm_adaptive(denoiser, noise, sampler_args.sigma_min, sampler_args.sigma_max, rtol=sampler_args.rtol, atol=sampler_args.atol, disable=False, callback=sampler_callback)
 
-def resample(model_fn, sampler_args, audio, chunk_size, steps=100, noise_level = 1.0, batch_size=1):
+def resample(model_fn, sampler_args, audio, chunk_size, steps=100, noise_level = 1.0, batch_size=1, generator=None):
   global device
   global step_size
   if sampler_args.sampler_type.startswith("v-"):
@@ -170,7 +170,7 @@ def resample(model_fn, sampler_args, audio, chunk_size, steps=100, noise_level =
     step_size = 100 / (len(step_list) - 1)
 
     alpha, sigma = t_to_alpha_sigma(step_list[-1])
-    noised = torch.randn([batch_size, 2, chunk_size], device='cuda')
+    noised = torch.randn([batch_size, 2, chunk_size], device='cuda', generator=generator)
     noised = audio * alpha + noised * sigma
     noise = noised
 
@@ -208,7 +208,7 @@ def resample(model_fn, sampler_args, audio, chunk_size, steps=100, noise_level =
   elif sampler_args.sampler_type == "k-dpm-adaptive":
     return K.sampling.sample_dpm_adaptive(denoiser, noised, sampler_args.sigma_min, noise_level, rtol=sampler_args.rtol, atol=sampler_args.atol, disable=False, callback=sampler_callback)
 
-def reverse_sample(model_fn, model_args, sampler_args, audio_samples, steps=100, noise_level = 1.0, batch_size=1):
+def reverse_sample(model_fn, model_args, sampler_args, audio_samples, steps=100, noise_level = 1.0, batch_size=1, generator=None):
   global device
   global step_size
   if sampler_args.sampler_type.startswith("v-"):
@@ -216,7 +216,7 @@ def reverse_sample(model_fn, model_args, sampler_args, audio_samples, steps=100,
     step_list = get_crash_schedule(t)
     step_size = 100 / steps
     alpha, sigma = t_to_alpha_sigma(step_list[-1])
-    noised = torch.randn([batch_size, 2, model_args.sample_size], device=device)
+    noised = torch.randn([batch_size, 2, model_args.sample_size], device=device, generator=generator)
     noised = audio_samples * alpha + noised * sigma
     noise = noised
 
@@ -251,16 +251,16 @@ def reverse_sample(model_fn, model_args, sampler_args, audio_samples, steps=100,
 
 
 
-def generate_func(batch_size, steps, model_fn, sampler_args, model_args):
+def generate_func(batch_size, steps, model_fn, sampler_args, model_args, generator):
     global device
     torch.cuda.empty_cache()
     gc.collect()
-    noise = torch.randn([batch_size, 2, model_args.sample_size]).to(device)
+    noise = torch.randn([batch_size, 2, model_args.sample_size], generator=generator).to(device)
     generated = sample(model_fn, sampler_args, noise, steps)
     generated = generated.clamp(-1, 1)
     return generated
 
-def variation_func(batch_size, steps, model_fn, sampler_args, model_args, noise_level, file_path):
+def variation_func(batch_size, steps, model_fn, sampler_args, model_args, noise_level, file_path, generator):
     global device
     torch.cuda.empty_cache()
     gc.collect()    
@@ -273,7 +273,7 @@ def variation_func(batch_size, steps, model_fn, sampler_args, model_args, noise_
     generated = resample(model_fn, sampler_args, audio_sample, model_args.sample_size, steps, noise_level, batch_size)
     return generated
 
-def interpolation_func(batch_size, steps, model_fn, sampler_args, model_args, source_audio, target_audio, n_interps, noise_level):
+def interpolation_func(batch_size, steps, model_fn, sampler_args, model_args, source_audio, target_audio, n_interps, noise_level, generator):
     global device
     global prog_bar
     torch.cuda.empty_cache()
@@ -286,7 +286,7 @@ def interpolation_func(batch_size, steps, model_fn, sampler_args, model_args, so
     audio_sample_2 = load_to_device(target_audio, model_args.sample_rate)
     audio_samples = augs(audio_sample_1).unsqueeze(0).repeat([2, 1, 1])
     audio_samples[1] = augs(audio_sample_2)    
-    reversed = reverse_sample(model_fn, model_args, sampler_args, audio_samples, steps, noise_level, batch_size)    
+    reversed = reverse_sample(model_fn, model_args, sampler_args, audio_samples, steps, noise_level, batch_size, generator)    
     latent_series = compute_interpolation_in_latent(reversed[0], reversed[1], [k/n_interps for k in range(n_interps + 2)])
     prog_bar.update_bar(0)  
     generated = sample(model_fn, sampler_args, latent_series, steps)
