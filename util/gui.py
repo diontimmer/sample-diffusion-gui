@@ -92,8 +92,8 @@ def play_audio(path):
 
 def load_settings(window):
     not_load = ['log', 'tab_group']
-    if os.path.exists('saved_settings/saved_settings.pickle'):
-        with open('saved_settings/saved_settings.pickle', 'rb') as f:
+    if os.path.exists('saved.sdsettings'):
+        with open('saved.sdsettings', 'rb') as f:
             saved_settings = pickle.load(f)
         update_sigma(window, saved_settings['alt_sigma'])
         update_input_path(window, saved_settings['gen_wave'] != 'None')
@@ -122,7 +122,7 @@ def load_extensions(window):
 
 
 def save_settings(values):
-    with open('saved_settings/saved_settings.pickle', 'wb') as f:
+    with open('saved.sdsettings', 'wb') as f:
         pickle.dump(values, f)
 
 
