@@ -18,11 +18,11 @@ from einops import rearrange
 import torchaudio
 import wandb
 import os
+sys.path.append(os.getcwd())
 from dataset.dataset import SampleDataset
-
-from audio_diffusion.models import DiffusionAttnUnet1D
-from audio_diffusion.utils import ema_update
-from viz.viz import audio_spectrogram_image
+from library.audio_diffusion.models import DiffusionAttnUnet1D
+from library.audio_diffusion.utils import ema_update
+from library.viz.viz import audio_spectrogram_image
 
 
 # Define the noise schedule and sampling loop

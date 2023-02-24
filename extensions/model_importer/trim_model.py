@@ -1,8 +1,8 @@
-import os, sys
+import os
 import torch
 import time
-from audio_diffusion.autoencoders import AudioAutoencoder
-from audio_diffusion.models import LatentAudioDiffusion
+from library.audio_diffusion.autoencoders import AudioAutoencoder
+from library.audio_diffusion.models import LatentAudioDiffusion
 #from trainers.trainers import LatentAudioDiffusionTrainer
 from torch.nn.parameter import Parameter
 

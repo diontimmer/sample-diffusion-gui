@@ -1,15 +1,15 @@
 from copy import deepcopy
 import math
 import gc
-from diffusion import sampling
+from library.diffusion import sampling
 import k_diffusion as K
 import torch
 from torch import nn
 from einops import rearrange
 import torchaudio
-from audio_diffusion.models import DiffusionAttnUnet1D
+from library.audio_diffusion.models import DiffusionAttnUnet1D
 import numpy as np
-from audio_diffusion.utils import Stereo, PadCrop
+from library.audio_diffusion.utils import Stereo, PadCrop
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 prog_bar = None

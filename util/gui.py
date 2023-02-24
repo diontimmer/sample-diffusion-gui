@@ -3,7 +3,6 @@ import glob
 import PySimpleGUI as sg
 from threading import Thread
 import re
-from util.scripts.trim_model import start_trim, prune_latent_uncond
 from util.scripts.note_detect import detect_notes
 from util.scripts.generate_wave import create_signal
 from util.scripts.merge_models_ratio import ratio_merge
@@ -16,12 +15,12 @@ import time
 import tkinter as tk
 import shutil
 from torch.cuda import empty_cache
-import dance_diffusion as dd
-from dance_diffusion import Object
+import library.dance_diffusion as dd
+from library.dance_diffusion import Object
 import argparse
-import json
 from pydub import AudioSegment, effects
 import subprocess
+from importlib import import_module
 
 # block pygame welcome message
 
@@ -92,22 +91,38 @@ def play_audio(path):
         pass
 
 def load_settings(window):
-    not_load = ['log']
-    if os.path.exists('saved_settings.pickle'):
-        with open('saved_settings.pickle', 'rb') as f:
+    not_load = ['log', 'tab_group']
+    if os.path.exists('saved_settings/saved_settings.pickle'):
+        with open('saved_settings/saved_settings.pickle', 'rb') as f:
             saved_settings = pickle.load(f)
         update_sigma(window, saved_settings['alt_sigma'])
         update_input_path(window, saved_settings['gen_wave'] != 'None')
         for key in saved_settings:
             if key not in not_load:
                 try:
-                    window[key].update(value=saved_settings[key])
-                except TypeError:
+                    if not isinstance(window[key], sg.Button):
+                        window[key].update(value=saved_settings[key])
+                except (TypeError, KeyError) as e:
+                    print(e)
                     pass
+
+def load_extensions(window):
+    exts = []
+    for folder in os.listdir('extensions'):
+        for file in os.listdir('extensions\\' + folder):
+            if file.endswith('.py') and file.startswith('ext_'):
+                extfile = f'extensions.{folder}.{file.split(".")[0]}'
+                ext = import_module(extfile, package=None)
+                exts.append(ext)
+                ext_info = ext.on_activate(window)
+                ext_tab = sg.Tab(ext_info['name'], ext_info['layout'], key=ext_info['name'])
+                window['tab_group'].add_tab(ext_tab)
+    return exts
+
 
 
 def save_settings(values):
-    with open('saved_settings.pickle', 'wb') as f:
+    with open('saved_settings/saved_settings.pickle', 'wb') as f:
         pickle.dump(values, f)
 
 
@@ -121,21 +136,6 @@ def refresh_models(window):
         window['model'].update(values=models, value=current_model)
         models.append('None')
         window['secondary_model'].update(values=models, value=window['secondary_model'].get())
-
-
-def importmodel_cmd(v):
-    if not os.path.exists('models'):
-        os.mkdir('models')
-    model_name = v['model_name'] if v['model_name'] != '' else os.path.basename(v['model_path']).split('.')[0]
-    model_path = v['model_path']
-    sample_rate = v['sample_rate']
-    model_size = v['model_size']
-    out_name = f'models/{model_name}_{sample_rate}_{model_size}.ckpt'
-    if v['trim']:
-        if not v['latent']:
-            start_trim(model_path, out_name)
-        else:
-            prune_latent_uncond(model_path, out_name, sample_rate, model_size)
 
 
 def apply_model_params(window, model_path):
@@ -242,40 +242,6 @@ def show_save_window(window, values):
             thread.start()
             break
     popup_window.close()
-
-
-def load_model(window):
-    # create the layout
-    popup_layout = [
-        [sg.Text('The importer will move the selected model to the models folder and rename it for use in autocomplete.\nThis tool can also trim the model to remove data for training.')],
-        [sg.Text('Select a .ckpt file'), sg.Input('path/to/model.ckpt', key='model_path'), sg.FileBrowse(file_types=(("Checkpoint files", "*.ckpt"),))],
-        [sg.Text('Model Name'), sg.InputText(default_text='', key='model_name')],
-        [sg.Text('Sample Rate'), sg.InputText(default_text='44100', key='sample_rate')],
-        [sg.Text('Size'), sg.InputText(default_text='65536', key='model_size')],
-        # checkbox for Latent?
-        [sg.Checkbox('Latent?', key='latent')],
-        [sg.Checkbox('Trim?', key='trim', default=True)],
-        [sg.Button('Confirm'), sg.Button('Cancel')]
-    ]
-    
-    # create the window
-    popup_window = sg.Window('Select File and Input Parameters', popup_layout, icon='util/data/dtico.ico', element_justification='center')
-    thread = None
-    # event loop to process user inputs
-    while True:
-        event, v = popup_window.read()
-        if event in (None, 'Cancel', sg.WIN_CLOSED):
-            break
-        elif event == 'Confirm':
-            popup_window['Confirm'].update(disabled=True)
-            thread = Thread(target=importmodel_cmd, args=(v,))
-            thread.start()
-            break
-    if thread:
-        thread.join()
-        refresh_models(window)
-    popup_window.close()
-
 
 def get_models():
     models = glob.glob('models/*.ckpt')

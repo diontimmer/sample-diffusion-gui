@@ -4,17 +4,17 @@ splash = sg.Window('Window Title', [[sg.Image(filename='util/data/splash.png')]]
 splash.read(timeout=0)
 
 from util.gui import *
-import dance_diffusion as dd
-from gui_train import show_trainer
+import library.dance_diffusion as dd
 
 sg.theme('DarkGrey7')   # Add a touch of color
+sg.set_options(suppress_raise_key_errors=False, suppress_error_popups=True, suppress_key_guessing=True)
 
 tree_layout = [
                 [sg.Button('Play'), sg.Button('Save'), sg.Button('Locate'), sg.Button('Load As Input'), sg.T('Preview Volume: '), sg.Slider(range=(0, 100), orientation='h', size=(50, 20), enable_events=True, key="-VOLUME-", default_value=100)],
                 [sg.Tree(data=sg.TreeData(), key='file_tree', headings=[], auto_size_columns=True, enable_events=True, show_expanded=True, expand_x=True, expand_y=True, row_height=30)]
                 ]
 
-settings_header = [
+settings_main = sg.Column([
                     [sg.T('Model File', tooltip='Path to the model checkpoint file to be used.'), sg.Combo([], key='model', default_value='', enable_events=True, size=(30,0))],
                     [sg.T('Mode', tooltip='The mode of operation'), sg.Combo(['Generation', 'Interpolation', 'Variation'], default_value=default_settings['mode'], key='mode')],
                     [sg.T('Output Path', tooltip='Path for output renders.'), sg.InputText('output', key='output_path'), sg.FolderBrowse()],
@@ -24,9 +24,9 @@ settings_header = [
                     [sg.T('Sample Rate', tooltip='  The samplerate the model was trained on.'), sg.InputText(default_settings['sample_rate'], key='sample_rate', size=(15,0), enable_events=True)],
                     [sg.T('Chunk Size', tooltip='The native chunk size of the model.'), sg.InputText(default_settings['chunk_size'], key='chunk_size', size=(15,0), enable_events=True), sg.T('', key='total_seconds')],
                     [sg.T('Seed', tooltip='The seed used for reproducable outputs. -1 for random seed.'), sg.InputText(default_settings['seed'], key='seed', size=(15,0))],
-                    ]
+                    ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
 
-settings_row_1 = [
+settings_add = sg.Column([
                     [sg.T('Secondary Model File', tooltip='Secondary model file used for merging.'), sg.Combo([], key='secondary_model', default_value='None', enable_events=True, size=(30,0))],
                     [sg.T('Secondary Merge Ratio', tooltip='Merge ratio for model merging [A-B] -> [0-1]'), sg.InputText('0.5', key='merge_ratio', size=(15,0), enable_events=True)],                    
                     [sg.T('Input Audio Path', key='ipathtext', tooltip='Path to audio (used for variations & interpolations).'), sg.InputText(default_settings['audio_source'], key='audio_source', disabled_readonly_background_color='DarkGrey'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),))],
@@ -36,11 +36,11 @@ settings_row_1 = [
                     [sg.T('Interp Audio Target Path', tooltip='Path to the audio target (used for interpolations).'), sg.InputText(default_settings['audio_target'], key='audio_target'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),))],
                     [sg.T('Interp Steps', tooltip='The number of interpolations.'), sg.InputText(default_settings['interpolations_linear'], key='interpolations_linear', size=(5,0))],
                     [sg.T('Noise Level', tooltip='The noise level (used for variations & interpolations).'), sg.InputText(default_settings['noise_level'], key='noise_level', size=(15,0))],
-                    ]
+                    ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
 
 
 
-settings_row_2 = [
+settings_sampler = sg.Column([
                     [sg.T('Steps', tooltip='The number of steps for the sampler.'), sg.InputText(default_settings['steps'], key='steps', size=(15,0))],
                     [sg.T('Sampler', tooltip='The sampler used for the diffusion model.'), sg.Combo(['v-ddim', 'v-iplms', 'k-heun', 'k-lms', 'k-dpmpp_2s_ancestral', 'k-dpm-2', 'k-dpm-fast', 'k-dpm-adaptive'], default_value='v-iplms', key='sampler')],
                     [sg.T('V-ETA'), sg.InputText('0', key='ddim_eta', size=(5,0))],
@@ -50,30 +50,36 @@ settings_row_2 = [
                     [sg.T('K-RHO'), sg.InputText('7', key='rho', size=(5,0))],
                     [sg.T('K-adaptive-RTOL'), sg.InputText('0.01', key='rtol', size=(5,0))],
                     [sg.T('K-adaptive-ATOL'), sg.InputText('0.01', key='atol', size=(5,0))],
-                    ]
+                    ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
 
-tabs = [sg.TabGroup([[sg.Tab('Main Settings', settings_header), sg.Tab('Additional Settings', settings_row_1), sg.Tab('Sampler Settings', settings_row_2)]], expand_x=True, expand_y=False)]
+tabs = [sg.TabGroup([[sg.Tab('Main Settings', [[settings_main]]), sg.Tab('Additional Settings', [[settings_add]]), sg.Tab('Sampler Settings', [[settings_sampler]])]], expand_x=True, expand_y=True, key='tab_group')]
 
 loading_gif_img = sg.Image(background_color=sg.theme_background_color(), key='-LOADINGGIF-')
 
-buttons = [sg.Button('Generate'), sg.Button('Import Model'), sg.Button('Train'), loading_gif_img]
+buttons = [sg.Button('Generate'), loading_gif_img]
 
 prog_bar = sg.ProgressBar(100, size=(0, 30), expand_x=True, key='progbar')
 
+bottom_column = sg.Column([buttons, [prog_bar]], expand_x=True, expand_y=False)
+
 window = sg.Window('Harmonai Sample Diffusion', [
     #[sg.Titlebar(title='', icon='util/data/dtico.png')],
-    [sg.Frame('Preview', tree_layout, expand_x=True, expand_y=True)],
+    [sg.Frame('Preview', tree_layout, expand_x=True, expand_y=True, size=(0,250))],
     tabs,
-    [prog_bar],  
-    buttons,
+    [bottom_column],
+    #prog_bar,  
+    #buttons,
     [sg.Sizer(0, 10)], 
     ], finalize=True, icon='util/data/dtico.ico', enable_close_attempted_event=True, resizable=True)
+
+window.set_min_size((650,615))
 splash.close()
 window['file_tree'].bind('<Double-Button-1>', '_double_clicked')
 window['-LOADINGGIF-'].update(visible=False)
 
 
 # init
+exts = load_extensions(window)
 load_settings(window)
 refresh_models(window)
 set_total_output(window)
@@ -90,9 +96,6 @@ while True:
 
     if event == 'Generate':
         show_save_window(window, values)
-
-    if event == 'Train':
-        show_trainer()
 
     if event == 'Import Model':
         load_model(window)
@@ -115,6 +118,9 @@ while True:
         set_total_seconds(window)
     if event == '-VOLUME-':
         set_volume(values['-VOLUME-'])
+
+    for ext in exts:
+        ext.handle_event_values(event, values)
 
     if len(values['file_tree']) > 0:
         if event in ('file_tree_double_clicked', 'Play'):

@@ -11,6 +11,7 @@ from shutil import which
 # ****************************************************************************
 
 python = sys.executable
+print(f'Launching using Python: {python}')
 platform = sys.platform
 
 def prRed(skk): print(f"\033[91m{skk}\033[00m") 
@@ -143,4 +144,4 @@ if __name__ == "__main__":
                     prRed('No FFMPEG detected! Please use homebrew "brew install ffmpeg" to install before using the GUI!')
                     exit()
     # LAUNCH
-    run(f'"{sys.executable}" {main_script_path}', "Starting main script, this might take a bit..", "MAIN SCRIPT CRASH", live=True)
+    run(f'"{sys.executable}" {main_script_path}', "Launch success! Starting main script, this might take a bit..", "MAIN SCRIPT CRASH", live=True)

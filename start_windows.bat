@@ -38,13 +38,14 @@ goto :show_stdout_stderr
 
 :activate_venv
 set PYTHON="%VENV_DIR%\Scripts\Python.exe"
-echo venv %PYTHON%
+echo Activating venv and launching.. Run 'launch_script.py' directly for use with your own interpreter.
 
 :skip_venv
 goto :launch
 
 :launch
 %PYTHON% launch_script.py %*
+pause
 exit /b
 
 :show_stdout_stderr
