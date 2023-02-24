@@ -176,6 +176,7 @@ def show_save_window(window, values):
         custom_batch_name = 'Untitled'
 
     # WARNINGS
+    disable_confirm = False
     warnings = [[]]
     if values['mode'] in ('Variation', 'Interpolation') and values['alt_sigma']:
         warnings.append(create_warning('WARNING: Using alternative sigma func for variation/interp mode will not work!'))
@@ -185,18 +186,51 @@ def show_save_window(window, values):
         warnings.append(create_warning(f'WARNING: Unusual sample rate detected: {values["sample_rate"]}!'))
     if values['gen_wave'] != 'None' and values['mode'] in ('Variation', 'Interpolation'):
         warnings.append(create_warning(f'Wave gen variation enabled: {values["gen_wave"]}', color='orange'))
+    if values['secondary_model'] != 'None' :
+        warnings.append(create_warning(f'Secondary model merge enabled: {values["secondary_model"]} * {values["merge_ratio"]}', color='orange'))
+    try:
+        total = int(window['batch_size'].get()) * int(window['batch_loop'].get())
+    except ValueError:
+        total = 0
+        warnings.append(create_warning('ERROR: Batches should be integers!'))
+        disable_confirm = True
+
+    stree_data = sg.TreeData()
+    def mk_tree_setting(treedata, key, value): return treedata.insert('', key=key, text=key, values=[value])
+
+    mk_tree_setting(stree_data, 'Batch Name', custom_batch_name)
+    mk_tree_setting(stree_data, 'Model Name', values["model"])
+    mk_tree_setting(stree_data, 'Mode', values["mode"])
+    mk_tree_setting(stree_data, 'Total Output', total)
+    mk_tree_setting(stree_data, 'Sampler', values["sampler"])
+    mk_tree_setting(stree_data, 'Steps', values["steps"])
+    mk_tree_setting(stree_data, 'Output Path', f'{values["output_path"]}/{values["mode"]}/{modelname}/')
+    mk_tree_setting(stree_data, 'Sample Rate', values["sample_rate"])
+    mk_tree_setting(stree_data, 'Chunk Size', values["chunk_size"])
+
+    #stree_data.insert('', key='testkey', text='test', values=['test', 'test'])
 
     popup_layout = [
         [sg.Text(f'Some processes can be lengthy, please ensure your settings are correct!', font='Arial 12', text_color='yellow')],
-        [sg.Text(f'Batch Name: {custom_batch_name}')],
-        [sg.Text(f'Output Path: {values["output_path"]}/{values["mode"]}/{modelname}/')],
+        [sg.Tree(stree_data, headings=[''], key='-stree-', show_expanded=True, enable_events=True, expand_y=True, expand_x=True)],
+        # [sg.Text(f'Batch Name: {custom_batch_name}')],
+        # [sg.Text(f'Model Name: {values["model"]}')],
+        # [sg.Text(f'Mode: {values["mode"]}')],
+        # [sg.Text(f'Total Output: {total}')],
+        # [sg.Text(f'Sampler: {values["sampler"]}')],
+        # [sg.Text(f'Output Path: {values["output_path"]}/{values["mode"]}/{modelname}/')],
         [sg.Button('Confirm'), sg.Button('Cancel')]
     ]
 
     popup_layout = popup_layout + warnings
     
     # create the window
-    popup_window = sg.Window('Confirm', popup_layout, icon='util/data/dtico.ico', element_justification='center')
+    popup_window = sg.Window('Confirm', popup_layout, icon='util/data/dtico.ico', element_justification='center', finalize=True)
+
+    if disable_confirm:
+        popup_window['Confirm'].update(disabled=True)
+        
+
     thread = None
     # event loop to process user inputs
     while True:
@@ -383,13 +417,16 @@ def get_args_from_window(values):
 
 def preview_keys(window, values):
     if values['gen_wave'] != 'None':
-        window['-LOADINGGIF-'].update(visible=True)
-        window['Preview Keys'].update(disabled=True)
-        preview = create_signal(values['gen_keys'].split(', '), int(values['sample_rate']), int(eval(str(values['chunk_size']))), float(values['gen_amp']), values['gen_wave'], 'tmp')
-        play_audio(preview)
-        window['-LOADINGGIF-'].update(visible=False)
-        window['Preview Keys'].update(disabled=False)
-        os.remove(preview)
+        try:
+            window['-LOADINGGIF-'].update(visible=True)
+            window['Preview Keys'].update(disabled=True)
+            preview = create_signal(values['gen_keys'].split(', '), int(values['sample_rate']), int(eval(str(values['chunk_size']))), float(values['gen_amp']), values['gen_wave'], 'tmp')
+            play_audio(preview)
+            window['-LOADINGGIF-'].update(visible=False)
+            window['Preview Keys'].update(disabled=False)
+            os.remove(preview)
+        except ValueError:
+            pass
 
 def open_in_finder(path):
     if sys.platform.startswith('win'):

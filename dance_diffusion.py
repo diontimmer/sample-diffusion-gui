@@ -167,7 +167,7 @@ def resample(model_fn, sampler_args, audio, chunk_size, steps=100, noise_level =
     t = torch.linspace(0, 1, steps + 1, device=device)
     step_list = get_crash_schedule(t)
     step_list = step_list[step_list < noise_level]
-    step_size = 100 / steps
+    step_size = 100 / (len(step_list) - 1)
 
     alpha, sigma = t_to_alpha_sigma(step_list[-1])
     noised = torch.randn([batch_size, 2, chunk_size], device='cuda')

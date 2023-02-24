@@ -45,7 +45,6 @@ goto :launch
 
 :launch
 %PYTHON% launch_script.py %*
-pause
 exit /b
 
 :show_stdout_stderr

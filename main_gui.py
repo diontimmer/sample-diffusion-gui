@@ -61,13 +61,13 @@ buttons = [sg.Button('Generate'), sg.Button('Import Model'), sg.Button('Train'),
 prog_bar = sg.ProgressBar(100, size=(0, 30), expand_x=True, key='progbar')
 
 window = sg.Window('Harmonai Sample Diffusion', [
-    [sg.Titlebar(title='', icon='util/data/dtico.png')],
+    #[sg.Titlebar(title='', icon='util/data/dtico.png')],
     [sg.Frame('Preview', tree_layout, expand_x=True, expand_y=True)],
     tabs,
     [prog_bar],  
     buttons,
     [sg.Sizer(0, 10)], 
-    ], finalize=True, icon='util/data/dtico.ico', enable_close_attempted_event=True)
+    ], finalize=True, icon='util/data/dtico.ico', enable_close_attempted_event=True, resizable=True)
 splash.close()
 window['file_tree'].bind('<Double-Button-1>', '_double_clicked')
 window['-LOADINGGIF-'].update(visible=False)
