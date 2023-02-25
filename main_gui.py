@@ -10,7 +10,7 @@ sg.theme('DarkGrey7')   # Add a touch of color
 sg.set_options(suppress_raise_key_errors=False, suppress_error_popups=True, suppress_key_guessing=True)
 
 tree_layout = [
-                [sg.Button('Play'), sg.Button('Save'), sg.Button('Locate'), sg.Button('Load As Input'), sg.T('Preview Volume: '), sg.Slider(range=(0, 100), orientation='h', size=(50, 20), enable_events=True, key="-VOLUME-", default_value=100)],
+                [sg.Button('', key='Play', font='Helvetica 20', image_data=TOP_PLAY, button_color=sg.theme_background_color()), sg.Button('', key='Save', font='Helvetica 20', image_data=TOP_SAVE, button_color=sg.theme_background_color()), sg.Button('', key='Locate', font='Helvetica 20', image_data=TOP_FOLDER, button_color=sg.theme_background_color()), sg.Button('Load As Input'), sg.T('Preview Volume: '), sg.Slider(range=(0, 100), orientation='h', size=(50, 20), enable_events=True, key="-VOLUME-", default_value=100)],
                 [sg.Tree(data=sg.TreeData(), key='file_tree', headings=[], auto_size_columns=True, enable_events=True, show_expanded=True, expand_x=True, expand_y=True, row_height=30)]
                 ]
 
