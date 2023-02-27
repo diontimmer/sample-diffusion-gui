@@ -71,7 +71,7 @@ window = sg.Window('Harmonai Sample Diffusion', [
     #prog_bar,  
     #buttons,
     [sg.Sizer(0, 10)], 
-    ], finalize=True, icon='util/data/dtico.ico', enable_close_attempted_event=True, resizable=True, size=(650,750))
+    ], finalize=True, icon='util/data/dtico2.ico', enable_close_attempted_event=True, resizable=True, size=(650,750))
 
 window.set_min_size((650,615))
 splash.close()
