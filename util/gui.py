@@ -257,6 +257,12 @@ def get_models():
         models = ['No models found, please load ckpt with tool.']
     return models
 
+def out_file_exists(output_folder, modelname, id_str, ix):
+    for f in os.listdir(output_folder):
+        if f.startswith(f"{modelname}_{id_str}_{ix}"):
+            return True
+    return False
+
 def get_args_object():
     args_object = Object()
     args_object.model = 'models/dd/model.ckpt'
@@ -286,8 +292,9 @@ def save_audio(audio_out, output_folder: str, sample_rate, id_str:str = None, mo
 
     for ix, sample in enumerate(audio_out, start=1):
         output_file = os.path.join(output_folder, f"{modelname}_{id_str}_{ix}.wav")
-        if os.path.exists(output_file):
-            os.remove(output_file)
+        while out_file_exists(output_folder, modelname, id_str, ix):
+            ix += 1
+            output_file = os.path.join(output_folder, f"{modelname}_{id_str}_{ix}.wav")
 
         open(output_file, "a").close()
         
