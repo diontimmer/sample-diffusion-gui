@@ -14,7 +14,7 @@ options_col = sg.Column([
     [sg.Text('Sample Rate'), sg.InputText(default_text='44100', key='ext_model_importer_SAMPLE_RATE')],
     [sg.Text('Size'), sg.InputText(default_text='65536', key='ext_model_importer_MODEL_SIZE')],
     # checkbox for Latent?
-    [sg.Checkbox('Latent?', key='ext_model_importer_LATENT')],
+    #[sg.Checkbox('Latent?', key='ext_model_importer_LATENT')],
     [sg.Checkbox('Import & Trim?', key='ext_model_importer_TRIM', default=True)],
 ], scrollable=True, vertical_scroll_only=True, size=(600, 200), expand_x=True, expand_y=True)
 
@@ -31,10 +31,11 @@ def importmodel_cmd(v):
     window['ext_model_importer_IMPORT'].update(disabled=True)
     window['ext_model_importer_TRIMONLY'].update(disabled=True)
     if v['ext_model_importer_TRIM']:
-        if not v['ext_model_importer_LATENT']:
-            window.start_thread(lambda: start_trim(model_path, out_name), 'ext_model_importer_FINISH_IMPORT')
-        else:
-            prune_latent_uncond(model_path, out_name, sample_rate, model_size)
+        prune_latent_uncond(model_path, out_name, sample_rate, model_size)
+        #if not v['ext_model_importer_LATENT']:
+        #    window.start_thread(lambda: start_trim(model_path, out_name), 'ext_model_importer_FINISH_IMPORT')
+        #else:
+        #    prune_latent_uncond(model_path, out_name, sample_rate, model_size)
 
 # ****************************************************************************
 # *                                 EXTENSION                                *

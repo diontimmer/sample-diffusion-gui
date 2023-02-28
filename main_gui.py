@@ -63,7 +63,7 @@ prog_bar = sg.ProgressBar(100, size=(0, 30), expand_x=True, key='progbar')
 
 bottom_column = sg.Column([buttons, [prog_bar]], expand_x=True, expand_y=False)
 
-window = sg.Window('Harmonai Sample Diffusion', [
+window = sg.Window('Vextra Diffusion Toolkit', [
     #[sg.Titlebar(title='', icon='util/data/dtico.png')],
     [sg.Frame('Preview', tree_layout, expand_x=True, expand_y=True, size=(0,250))],
     tabs,
