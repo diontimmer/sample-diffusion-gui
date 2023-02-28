@@ -1,4 +1,4 @@
-# sample-diffusion-gui
+# sample-diffusion-gui/Vextra Diffusion Toolkit
 
 GUI toolkit for various audio diffusion operations. Run/Install using start_windows.bat or start_unix.sh.<br>
 This will create a venv and install the requirements.<br>
