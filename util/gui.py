@@ -47,22 +47,22 @@ TOP_FOLDER = b'iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAA
 TOP_SAVE = b'iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAGYktHRAD/AP8A/6C9p5MAAAHHSURBVEhL3ZW7SgNBFIazu1kRbCyCEBWsBLXS0hvaGEEULHwTH0C0zpMoWFkEbyFaGBQFsYyioCKKhZXiZrPrN5NZzWUviSaNP/z5z5w5Z85cDtlYu6GJn2KxuKTr+oz0AE3TLmGf4zgJ9AomXddNqGkJ5h7I+cA/iL6i58TloKVCfkBwmoBKbOIrCAPdLpVK0q4E/jN4oOwC3CIuiybVshK60paAk8wip5ZlTZc9DRbg2MdsdLeSuPPl2WoQ2x+Px/eJWRbjRgqk4BjsqeEUi0ygdaBIB1clcqILENwFR/3IlXSqsEC09A38INuU46TZ0ar0AI6+g++EHXYrVyiIfSN2kjUWlEv4NgzDWPMGVW3KWMBqko5Kl6Bl18XavlfETgTMJilvoxZtf4N/WEC91fsv6aplvlHXpsQcIhm0V4wbBfn3yAo6Lsas6d+m2Bl4oWzBZ/gUwBeZBLDztOaRGoa3qQcRh+zBTADl3zUaiKhH1skfRkcCOAR9+99DaAHu04WfmGH80wlE8i28CeAdDEVUAQPOc02LfmRujhOGXpHXpini5MeDxGtEfAOqvq1RoGse+Ue1yRsQY9u2c6ZpZuVk+xCLfQHePuC8s7JtPQAAAABJRU5ErkJggg=='
 
 
-def load_theme():
+def load_theme(qt=False):
+    interface = sg if qt == False else sgqt
     with open('config/guiconfig.yaml', 'r') as f:
         config = yaml.safe_load(f)
         if config['theme'] == 'Custom':
-            breakpoint()
-            sg.LOOK_AND_FEEL_TABLE['Custom'] = {
-                'BACKGROUND': get_config_value['BACKGROUND'],
-                'TEXT': get_config_value['TEXT'],
-                'INPUT': get_config_value['INPUT'],
-                'TEXT_INPUT': get_config_value['TEXT_INPUT'],
-                'SCROLL': get_config_value['SCROLL'],
-                'BUTTON': (get_config_value['BUTTON'][0], get_config_value['BUTTON'][1]),
-                'PROGRESS': (get_config_value['PROGRESS'][0], get_config_value['PROGRESS'][1]),
-                'BORDER': get_config_value['BORDER'], 
-                'SLIDER_DEPTH': get_config_value['SLIDER_DEPTH'], 
-                'PROGRESS_DEPTH': get_config_value['PROGRESS_DEPTH'], 
+            interface.LOOK_AND_FEEL_TABLE['Custom'] = {
+                'BACKGROUND': get_config_value('BACKGROUND'),
+                'TEXT': get_config_value('TEXT'),
+                'INPUT': get_config_value('INPUT'),
+                'TEXT_INPUT': get_config_value('TEXT_INPUT'),
+                'SCROLL': get_config_value('SCROLL'),
+                'BUTTON': (get_config_value('BUTTON')[0], get_config_value('BUTTON')[1]),
+                'PROGRESS': (get_config_value('PROGRESS')[0], get_config_value('PROGRESS')[1]),
+                'BORDER': get_config_value('BORDER'), 
+                'SLIDER_DEPTH': get_config_value('SLIDER_DEPTH'), 
+                'PROGRESS_DEPTH': get_config_value('PROGRESS_DEPTH'), 
                 }
             return 'Custom'
         else:
@@ -87,7 +87,7 @@ def save_config_value(key, value):
 
 
 def show_drop_window(window, target):
-    sgqt.theme(load_theme())
+    sgqt.theme(load_theme(qt=True))
     dropped = None
     class Image(sgqt.Image):
     
