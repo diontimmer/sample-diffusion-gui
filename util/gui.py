@@ -1,8 +1,8 @@
 import os
 import glob
 import PySimpleGUI as sg
+import PySimpleGUIQt as sgqt
 from threading import Thread
-import re
 from util.scripts.note_detect import detect_notes
 from util.scripts.generate_wave import create_signal
 from util.scripts.merge_models_ratio import ratio_merge
@@ -17,10 +17,10 @@ import shutil
 from torch.cuda import empty_cache
 import library.dance_diffusion as dd
 from library.dance_diffusion import Object
-import argparse
 from pydub import AudioSegment, effects
 import subprocess
 from importlib import import_module
+import PySide2.QtCore as QtCore
 
 # block pygame welcome message
 
@@ -44,6 +44,47 @@ LOADING_GIF_B64 = b'R0lGODlhGAAYAPUAAP7+/oaHhoeIh5eYl5+fn56gnqKjoqOjo6Wnpaeop6ip
 TOP_PLAY = b'iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAGYktHRAD/AP8A/6C9p5MAAAF/SURBVEhLrZY/S8NQFEebxDgJBTfBwVUQnASlDk66Coq4ioOzmx9AR2cHHUQQUaSTgzo4dRJEcHDxIwiCFFzyz/N4N61tGpO8lwOXF34p9/TelNDGMFEUnVHXSZI0JaqXOI7bNE8436k5iY1x5czgOM4s1QmCYEMiI3IFQtN13RsmOWKoMcnsSFc0DPk9NSkfK03RBD1Y1xqeFyTzEpWitEDBumY4Oki2kTk6/Z9KAgWTTHBcIjlGMq7TfCoLFEgYxt1H8kBNSTwSI0EKkhWmeEbSkiiDlUCBZJrjCcmeTgaxFihYmXoWJ2EY7uqkTy0CIfE8L5LrHrUIeA4/HDtMcq6TPtYCmn9wLPMsLnQyiJWA5nccizR/1UkWIwGNY+qQlazT/EvicvBzG/myS+F+l1f4pny8kEoT0Fztu+X7/q1Oiikt4Mu3WccC9SZRKQoFNA6oA/a9RX1LbM7fZ8D1J7Uqt4zInYDGahVLrORRJzVB41P+tlwxgHrvW9Jo/ALIXuM35uY3iAAAAABJRU5ErkJggg=='
 TOP_FOLDER = b'iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAGYktHRAD/AP8A/6C9p5MAAAJFSURBVEhLrZU9SFtRFMf7XmIGP0vFRXRR7CKC2EGcdBANLoK4CqHOrlLoIoKD1L1IKVSoRl10MARFRXBxEwQdHCJCipCghmLEvHy8/k7fJTXEd/O0/uFw/vfcc885997z7jNs2w4hXW/K8YDsG4YhYjumFyAPSPAkCoDpJVSdcn8+VCwtSHCK9EFNtcwz5Ig8bV/yoBLotGPRg2MV/1nPCV4CQoeftWWOSY4rhWSUqSIMLvFEcR0SpmkuUtERvJ7tp+FNyAS8H204bmWIGtlsdlQNyuDz+QoE2IO+J8gcepBxQObYxQW2BXwkcQ+FNov9Mfx+f1zbRSz6SqAh5E6ZyoDPciaT6cbnXpmKwLbimoCFN6g2tHSOFrlcbopg82pYhCRwvWSOYpPgo5x9kzK5Ap9p1JIzKoWui4453z7FtaCYFqRA0SllKkKXQDqlQXEvqMHfUrwIXYJW5NyhenDWeVSSXbx1LP/gmoBqhrmDDXTFL53AEXx70X9b+DF0l9xLH8v8umN5GuTPWpb1Cf9JZSqFVOgGqoqx/Q70qjKVAHsciSLfGMq3UNLS0qYVHzumY6gQQWgq3zi8A/nN4gPacwtu4vOFHST5Hr6z6234O+yyNuzpNRUfcIjsMPyF1BL8A+Mx+C08CJ+BJ5Gf8Ai2RrS3BJVAiDhqBP2Z6q/hP+AR+K6uTT2DQC0SkCOSB7ER+YgtiE7IPznF5KuAWJfcTSeyhsgrW21ApEvapZLXAPGuAoHAGXSZBLduP4r/BsGrbNse+AOnZcBQshASWgAAAABJRU5ErkJggg=='
 TOP_SAVE = b'iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAGYktHRAD/AP8A/6C9p5MAAAHHSURBVEhL3ZW7SgNBFIazu1kRbCyCEBWsBLXS0hvaGEEULHwTH0C0zpMoWFkEbyFaGBQFsYyioCKKhZXiZrPrN5NZzWUviSaNP/z5z5w5Z85cDtlYu6GJn2KxuKTr+oz0AE3TLmGf4zgJ9AomXddNqGkJ5h7I+cA/iL6i58TloKVCfkBwmoBKbOIrCAPdLpVK0q4E/jN4oOwC3CIuiybVshK60paAk8wip5ZlTZc9DRbg2MdsdLeSuPPl2WoQ2x+Px/eJWRbjRgqk4BjsqeEUi0ygdaBIB1clcqILENwFR/3IlXSqsEC09A38INuU46TZ0ar0AI6+g++EHXYrVyiIfSN2kjUWlEv4NgzDWPMGVW3KWMBqko5Kl6Bl18XavlfETgTMJilvoxZtf4N/WEC91fsv6aplvlHXpsQcIhm0V4wbBfn3yAo6Lsas6d+m2Bl4oWzBZ/gUwBeZBLDztOaRGoa3qQcRh+zBTADl3zUaiKhH1skfRkcCOAR9+99DaAHu04WfmGH80wlE8i28CeAdDEVUAQPOc02LfmRujhOGXpHXpini5MeDxGtEfAOqvq1RoGse+Ue1yRsQY9u2c6ZpZuVk+xCLfQHePuC8s7JtPQAAAABJRU5ErkJggg=='
+
+def show_drop_window(window, target):
+    sgqt.theme('DarkGrey7')
+    dropped = None
+    class Image(sgqt.Image):
+    
+        def dragEnterEvent(self, e):
+            e.accept()
+    
+        def dragMoveEvent(self, e):
+            e.accept()
+    
+        def dropEvent(self, e):
+            items = [str(v) for v in e.mimeData().text().strip().split('\n')]
+            dropped = items[0].replace('file:///', '')
+            if dropped.endswith(['.wav', '.mp3', '.ogg', '.flac']):
+                window[target].update(value=dropped)
+                drop_window.close()
+    
+        def enable_drop(self):
+            # Called after window finalized
+            self.Widget.setAcceptDrops(True)
+            self.Widget.dragEnterEvent = self.dragEnterEvent
+            self.Widget.dragMoveEvent = self.dragMoveEvent
+            self.Widget.dropEvent = self.dropEvent
+    
+    layout = [[sgqt.Text('Please drop your audio files!')], [Image(filename='util/data/drop_arrow.png', size=(128, 128), enable_events=True, key='IMAGE')]]
+    
+    drop_window = sgqt.Window("Drop Window", layout, finalize=True, icon='util/data/dtico2.ico', resizable=False)
+    drop_window['IMAGE'].enable_drop()
+    drop_window.QT_QMainWindow.setWindowFlags(drop_window.QT_QMainWindow.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
+    drop_window.QT_QMainWindow.show()
+
+    while True:
+        event, values = drop_window.read()
+        if event == sgqt.WINDOW_CLOSED:
+            break
+    
+    drop_window.close()
+    return dropped if dropped is not None else None
+
 def set_total_seconds(window):
     try:
         samplerate = int(window['sample_rate'].get())

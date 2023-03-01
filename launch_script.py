@@ -80,6 +80,7 @@ post_torch_packages = [
                         "diffusers",
                         "tqdm",
                         "PySimpleGUI",
+                        "PySimpleGUIQt",
                         "torchaudio",
                         "pydub",
                         "ema_pytorch",

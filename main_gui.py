@@ -29,12 +29,12 @@ settings_main = sg.Column([
                     ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
 
 settings_add = sg.Column([
-                    [sg.T('Input Audio Path', key='ipathtext', tooltip='Path to audio (used for variations & interpolations).'), sg.InputText(default_settings['audio_source'], key='audio_source', disabled_readonly_background_color='DarkGrey'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),))],
+                    [sg.T('Input Audio Path', key='ipathtext', tooltip='Path to audio (used for variations & interpolations).'), sg.InputText(default_settings['audio_source'], key='audio_source', disabled_readonly_background_color='DarkGrey'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),)), sg.Button('Drop', key='drop_source')],
                     [sg.T('Input Folder Path', key='fpathtext', tooltip='Path to folder containing audio (used for variations & interpolations).'), sg.InputText(default_settings['audio_source_folder'], key='audio_source_folder', disabled_readonly_background_color='DarkGrey'), sg.FolderBrowse()],
                     [sg.T('Generate Wave Input', tooltip='Generate wave for input (used for variations & interpolations).'), sg.Combo(['Sine', 'Square', 'Saw', 'None'], default_value=default_settings['gen_wave'], key='gen_wave', enable_events=True)],
                     [sg.T('Generate Wave Keys', tooltip='Key schedule for the wave generation. (Separate by , !)'), sg.InputText(default_settings['gen_keys'], key='gen_keys'), sg.Button('Preview Keys')],
                     [sg.T('Generate Wave Amplitude', tooltip='Amp for the generated wave.'), sg.InputText(default_settings['gen_amp'], key='gen_amp', size=(15,0))],
-                    [sg.T('Interp Audio Target Path', tooltip='Path to the audio target (used for interpolations).'), sg.InputText(default_settings['audio_target'], key='audio_target'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),))],
+                    [sg.T('Interp Audio Target Path', tooltip='Path to the audio target (used for interpolations).'), sg.InputText(default_settings['audio_target'], key='audio_target'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),)), sg.Button('Drop', key='drop_target')],
                     [sg.T('Interp Steps', tooltip='The number of interpolations.'), sg.InputText(default_settings['interpolations_linear'], key='interpolations_linear', size=(5,0))],
                     [sg.T('Noise Level', tooltip='The noise level (used for variations & interpolations).'), sg.InputText(default_settings['noise_level'], key='noise_level', size=(15,0))],
                     ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
@@ -94,6 +94,12 @@ while True:
     if event in (sg.WINDOW_CLOSE_ATTEMPTED_EVENT, 'Exit'):
         save_settings(values)
         break
+
+    if event == 'drop_source':
+        result = show_drop_window(window, 'audio_source')
+
+    if event == 'drop_target':
+        result = show_drop_window(window, 'drop_target')
 
     if event == 'Generate':
         show_save_window(window, values)
