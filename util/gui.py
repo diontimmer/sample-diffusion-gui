@@ -59,7 +59,7 @@ def show_drop_window(window, target):
         def dropEvent(self, e):
             items = [str(v) for v in e.mimeData().text().strip().split('\n')]
             dropped = items[0].replace('file:///', '')
-            if dropped.endswith(['.wav', '.mp3', '.ogg', '.flac']):
+            if dropped.endswith(('.wav', '.mp3', '.ogg', '.flac')):
                 window[target].update(value=dropped)
                 drop_window.close()
     
@@ -70,7 +70,7 @@ def show_drop_window(window, target):
             self.Widget.dragMoveEvent = self.dragMoveEvent
             self.Widget.dropEvent = self.dropEvent
     
-    layout = [[sgqt.Text('Please drop your audio files!')], [Image(filename='util/data/drop_arrow.png', size=(128, 128), enable_events=True, key='IMAGE')]]
+    layout = [[Image(filename='util/data/drop_arrow.png', size=(128, 128), enable_events=True, key='IMAGE')], [sgqt.Text('Please drop your audio files!')]]
     
     drop_window = sgqt.Window("Drop Window", layout, finalize=True, icon='util/data/dtico2.ico', resizable=False)
     drop_window['IMAGE'].enable_drop()
