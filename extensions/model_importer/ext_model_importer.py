@@ -31,9 +31,9 @@ def importmodel_cmd(v):
     window['ext_model_importer_IMPORT'].update(disabled=True)
     window['ext_model_importer_TRIMONLY'].update(disabled=True)
     if v['ext_model_importer_TRIM']:
-        prune_latent_uncond(model_path, out_name, sample_rate, model_size)
+        #prune_latent_uncond(model_path, out_name, sample_rate, model_size)
         #if not v['ext_model_importer_LATENT']:
-        #    window.start_thread(lambda: start_trim(model_path, out_name), 'ext_model_importer_FINISH_IMPORT')
+        window.start_thread(lambda: start_trim(model_path, out_name), 'ext_model_importer_FINISH_IMPORT')
         #else:
         #    prune_latent_uncond(model_path, out_name, sample_rate, model_size)
 
