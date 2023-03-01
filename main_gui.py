@@ -6,7 +6,10 @@ splash.read(timeout=0)
 from util.gui import *
 import library.dance_diffusion as dd
 
-sg.theme('DarkGrey7')   # Add a touch of color
+
+
+
+sg.theme(load_theme())   # Add a touch of color
 sg.set_options(suppress_raise_key_errors=False, suppress_error_popups=True, suppress_key_guessing=True)
 
 tree_layout = [
@@ -71,7 +74,7 @@ window = sg.Window('Vextra Diffusion Toolkit', [
     #prog_bar,  
     #buttons,
     [sg.Sizer(0, 10)], 
-    ], finalize=True, icon='util/data/dtico2.ico', enable_close_attempted_event=True, resizable=True, size=(650,750))
+    ], finalize=True, icon='util/data/dtico2.ico', enable_close_attempted_event=True, resizable=True, size=(650,750), keep_on_top=get_config_value('stay_on_top'))
 
 window.set_min_size((650,615))
 splash.close()

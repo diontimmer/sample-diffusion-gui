@@ -1,0 +1,35 @@
+# ****************************************************************************
+# *                                  config                                  *
+# ****************************************************************************
+
+# Set theme to any of the included PSG themes, or set the theme to 'Custom' and define your own
+# Some favorite themes are:
+# DarkGrey7
+# DarkTeal11
+
+
+theme: DarkGrey7 # https://www.geeksforgeeks.org/themes-in-pysimplegui/
+
+
+# Settings for 'Custom':
+
+BACKGROUND: '#000066'
+TEXT: '#FFCC66'
+INPUT: '#339966'
+TEXT_INPUT: '#000000'
+SCROLL: '#99CC99'
+BUTTON: 
+  - '#003333'
+  - '#FFCC66'
+PROGRESS: 
+  - '#D1826B' 
+  - '#CC8019'
+BORDER: 1
+SLIDER_DEPTH: 0 
+PROGRESS_DEPTH: 0
+
+
+
+
+
+stay_on_top: False # Keep window on top?

@@ -94,11 +94,13 @@ post_torch_packages = [
                         "pandas",
                         "librosa",
                         "tqdm",
-                        "k-diffusion"
+                        "k-diffusion",
+                        "pyyaml"
                         ]
 
 aliases = {
-    "k-diffusion": 'k_diffusion'
+    "k-diffusion": 'k_diffusion',
+    "pyyaml": 'yaml',
 }
 
 

@@ -21,6 +21,7 @@ from pydub import AudioSegment, effects
 import subprocess
 from importlib import import_module
 import PySide2.QtCore as QtCore
+import yaml
 
 # block pygame welcome message
 
@@ -45,8 +46,48 @@ TOP_PLAY = b'iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAAR
 TOP_FOLDER = b'iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAGYktHRAD/AP8A/6C9p5MAAAJFSURBVEhLrZU9SFtRFMf7XmIGP0vFRXRR7CKC2EGcdBANLoK4CqHOrlLoIoKD1L1IKVSoRl10MARFRXBxEwQdHCJCipCghmLEvHy8/k7fJTXEd/O0/uFw/vfcc885997z7jNs2w4hXW/K8YDsG4YhYjumFyAPSPAkCoDpJVSdcn8+VCwtSHCK9EFNtcwz5Ig8bV/yoBLotGPRg2MV/1nPCV4CQoeftWWOSY4rhWSUqSIMLvFEcR0SpmkuUtERvJ7tp+FNyAS8H204bmWIGtlsdlQNyuDz+QoE2IO+J8gcepBxQObYxQW2BXwkcQ+FNov9Mfx+f1zbRSz6SqAh5E6ZyoDPciaT6cbnXpmKwLbimoCFN6g2tHSOFrlcbopg82pYhCRwvWSOYpPgo5x9kzK5Ap9p1JIzKoWui4453z7FtaCYFqRA0SllKkKXQDqlQXEvqMHfUrwIXYJW5NyhenDWeVSSXbx1LP/gmoBqhrmDDXTFL53AEXx70X9b+DF0l9xLH8v8umN5GuTPWpb1Cf9JZSqFVOgGqoqx/Q70qjKVAHsciSLfGMq3UNLS0qYVHzumY6gQQWgq3zi8A/nN4gPacwtu4vOFHST5Hr6z6234O+yyNuzpNRUfcIjsMPyF1BL8A+Mx+C08CJ+BJ5Gf8Ai2RrS3BJVAiDhqBP2Z6q/hP+AR+K6uTT2DQC0SkCOSB7ER+YgtiE7IPznF5KuAWJfcTSeyhsgrW21ApEvapZLXAPGuAoHAGXSZBLduP4r/BsGrbNse+AOnZcBQshASWgAAAABJRU5ErkJggg=='
 TOP_SAVE = b'iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAGYktHRAD/AP8A/6C9p5MAAAHHSURBVEhL3ZW7SgNBFIazu1kRbCyCEBWsBLXS0hvaGEEULHwTH0C0zpMoWFkEbyFaGBQFsYyioCKKhZXiZrPrN5NZzWUviSaNP/z5z5w5Z85cDtlYu6GJn2KxuKTr+oz0AE3TLmGf4zgJ9AomXddNqGkJ5h7I+cA/iL6i58TloKVCfkBwmoBKbOIrCAPdLpVK0q4E/jN4oOwC3CIuiybVshK60paAk8wip5ZlTZc9DRbg2MdsdLeSuPPl2WoQ2x+Px/eJWRbjRgqk4BjsqeEUi0ygdaBIB1clcqILENwFR/3IlXSqsEC09A38INuU46TZ0ar0AI6+g++EHXYrVyiIfSN2kjUWlEv4NgzDWPMGVW3KWMBqko5Kl6Bl18XavlfETgTMJilvoxZtf4N/WEC91fsv6aplvlHXpsQcIhm0V4wbBfn3yAo6Lsas6d+m2Bl4oWzBZ/gUwBeZBLDztOaRGoa3qQcRh+zBTADl3zUaiKhH1skfRkcCOAR9+99DaAHu04WfmGH80wlE8i28CeAdDEVUAQPOc02LfmRujhOGXpHXpini5MeDxGtEfAOqvq1RoGse+Ue1yRsQY9u2c6ZpZuVk+xCLfQHePuC8s7JtPQAAAABJRU5ErkJggg=='
 
+
+def load_theme():
+    with open('config/guiconfig.yaml', 'r') as f:
+        config = yaml.safe_load(f)
+        if config['theme'] == 'Custom':
+            breakpoint()
+            sg.LOOK_AND_FEEL_TABLE['Custom'] = {
+                'BACKGROUND': get_config_value['BACKGROUND'],
+                'TEXT': get_config_value['TEXT'],
+                'INPUT': get_config_value['INPUT'],
+                'TEXT_INPUT': get_config_value['TEXT_INPUT'],
+                'SCROLL': get_config_value['SCROLL'],
+                'BUTTON': (get_config_value['BUTTON'][0], get_config_value['BUTTON'][1]),
+                'PROGRESS': (get_config_value['PROGRESS'][0], get_config_value['PROGRESS'][1]),
+                'BORDER': get_config_value['BORDER'], 
+                'SLIDER_DEPTH': get_config_value['SLIDER_DEPTH'], 
+                'PROGRESS_DEPTH': get_config_value['PROGRESS_DEPTH'], 
+                }
+            return 'Custom'
+        else:
+            return config['theme']
+
+
+
+
+
+def get_config_value(key):
+    with open('config/guiconfig.yaml', 'r') as f:
+        config = yaml.safe_load(f)
+        return config[key]
+
+def save_config_value(key, value):
+    with open('config/guiconfig.yaml', 'r') as f:
+        config = yaml.safe_load(f)
+        config[key] = value
+    with open('config/guiconfig.yaml', 'w') as f:
+        yaml.dump(config, f)
+
+
+
 def show_drop_window(window, target):
-    sgqt.theme('DarkGrey7')
+    sgqt.theme(load_theme())
     dropped = None
     class Image(sgqt.Image):
     
@@ -286,7 +327,7 @@ def show_save_window(window, values):
         if event in (None, 'Cancel', sg.WIN_CLOSED):
             break
         elif event == 'Confirm':
-            thread = Thread(target=generate, args=(window, values))
+            thread = Thread(target=generate, args=(window, values), daemon=True)
             thread.start()
             break
     popup_window.close()
