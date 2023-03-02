@@ -4,6 +4,8 @@ splash = sg.Window('Window Title', [[sg.Image(filename='util/data/splash.png')]]
 splash.read(timeout=0)
 
 from util.gui import *
+from util.constants import *
+from util.components import *
 import library.dance_diffusion as dd
 
 
@@ -13,7 +15,7 @@ sg.theme(load_theme())   # Add a touch of color
 sg.set_options(suppress_raise_key_errors=False, suppress_error_popups=True, suppress_key_guessing=True)
 
 tree_layout = [
-                [sg.Button('', key='Play', font='Helvetica 20', image_data=TOP_PLAY, button_color=sg.theme_background_color()), sg.Button('', key='Save', font='Helvetica 20', image_data=TOP_SAVE, button_color=sg.theme_background_color()), sg.Button('', key='Locate', font='Helvetica 20', image_data=TOP_FOLDER, button_color=sg.theme_background_color()), sg.Button('Load As Input'), sg.T('Preview Volume: '), sg.Slider(range=(0, 100), orientation='h', size=(50, 20), enable_events=True, key="-VOLUME-", default_value=100)],
+                [sg.Button('', key='Play', font='Helvetica 20', image_data=TOP_PLAY, button_color=sg.theme_background_color(), border_width=0), sg.Button('', key='Save', font='Helvetica 20', image_data=TOP_SAVE, button_color=sg.theme_background_color(), border_width=0), sg.Button('', key='Locate', font='Helvetica 20', image_data=TOP_FOLDER, button_color=sg.theme_background_color(), border_width=0), sg.Button('Load As Input'), sg.T('Preview Volume: '), sg.Slider(range=(0, 100), orientation='h', size=(50, 20), enable_events=True, key="-VOLUME-", default_value=100, disable_number_display=True)],
                 [sg.Tree(data=sg.TreeData(), key='file_tree', headings=[], auto_size_columns=True, enable_events=True, show_expanded=True, expand_x=True, expand_y=True, row_height=30)]
                 ]
 
@@ -32,12 +34,12 @@ settings_main = sg.Column([
                     ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
 
 settings_add = sg.Column([
-                    [sg.T('Input Audio Path', key='ipathtext', tooltip='Path to audio (used for variations & interpolations).'), sg.InputText(default_settings['audio_source'], key='audio_source', disabled_readonly_background_color='DarkGrey'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),)), sg.Button('Drop', key='drop_source')],
-                    [sg.T('Input Folder Path', key='fpathtext', tooltip='Path to folder containing audio (used for variations & interpolations).'), sg.InputText(default_settings['audio_source_folder'], key='audio_source_folder', disabled_readonly_background_color='DarkGrey'), sg.FolderBrowse()],
+                    [sg.T('Input Audio Path', key='ipathtext', tooltip='Path to audio (used for variations & interpolations).'), sg.Button('❌', key='clear_audio_source', button_color=sg.theme_background_color(), border_width=0), sg.InputText(default_settings['audio_source'], key='audio_source', disabled_readonly_background_color='DarkGrey'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),)), sg.Button('Drop', key='drop_source')],
+                    [sg.T('Input Folder Path', key='fpathtext', tooltip='Path to folder containing audio (used for variations & interpolations).'), sg.Button('❌', key='clear_audio_source_folder', button_color=sg.theme_background_color(), border_width=0), sg.InputText(default_settings['audio_source_folder'], key='audio_source_folder', disabled_readonly_background_color='DarkGrey'), sg.FolderBrowse()],
                     [sg.T('Generate Wave Input', tooltip='Generate wave for input (used for variations & interpolations).'), sg.Combo(['Sine', 'Square', 'Saw', 'None'], default_value=default_settings['gen_wave'], key='gen_wave', enable_events=True)],
                     [sg.T('Generate Wave Keys', tooltip='Key schedule for the wave generation. (Separate by , !)'), sg.InputText(default_settings['gen_keys'], key='gen_keys'), sg.Button('Preview Keys')],
                     [sg.T('Generate Wave Amplitude', tooltip='Amp for the generated wave.'), sg.InputText(default_settings['gen_amp'], key='gen_amp', size=(15,0))],
-                    [sg.T('Interp Audio Target Path', tooltip='Path to the audio target (used for interpolations).'), sg.InputText(default_settings['audio_target'], key='audio_target'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),)), sg.Button('Drop', key='drop_target')],
+                    [sg.T('Interp Audio Target Path', tooltip='Path to the audio target (used for interpolations).'), sg.Button('❌', key='clear_audio_target', button_color=sg.theme_background_color(), border_width=0), sg.InputText(default_settings['audio_target'], key='audio_target'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),)), sg.Button('Drop', key='drop_target')],
                     [sg.T('Interp Steps', tooltip='The number of interpolations.'), sg.InputText(default_settings['interpolations_linear'], key='interpolations_linear', size=(5,0))],
                     [sg.T('Noise Level', tooltip='The noise level (used for variations & interpolations).'), sg.InputText(default_settings['noise_level'], key='noise_level', size=(15,0))],
                     ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
@@ -74,9 +76,9 @@ window = sg.Window('Vextra Diffusion Toolkit', [
     #prog_bar,  
     #buttons,
     [sg.Sizer(0, 10)], 
-    ], finalize=True, icon='util/data/dtico2.ico', enable_close_attempted_event=True, resizable=True, size=(650,750), keep_on_top=get_config_value('stay_on_top'))
+    ], finalize=True, icon='util/data/dtico2.ico', enable_close_attempted_event=True, resizable=True, size=(700,750), keep_on_top=get_config_value('stay_on_top'))
 
-window.set_min_size((650,615))
+window.set_min_size((670,615))
 splash.close()
 window['file_tree'].bind('<Double-Button-1>', '_double_clicked')
 window['-LOADINGGIF-'].update(visible=False)
@@ -97,6 +99,9 @@ while True:
     if event in (sg.WINDOW_CLOSE_ATTEMPTED_EVENT, 'Exit'):
         save_settings(values)
         break
+
+    if event.startswith('clear_'):
+        window[event.replace('clear_', '')].update(value='')
 
     if event == 'drop_source':
         result = show_drop_window(window, 'audio_source')
