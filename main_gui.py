@@ -102,7 +102,7 @@ while True:
         result = show_drop_window(window, 'audio_source')
 
     if event == 'drop_target':
-        result = show_drop_window(window, 'drop_target')
+        result = show_drop_window(window, 'audio_target')
 
     if event == 'Generate':
         show_save_window(window, values)

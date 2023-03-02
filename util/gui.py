@@ -533,8 +533,6 @@ def generate(window, values):
         varlist = [os.path.join(args.audio_source_folder, audio) for audio in os.listdir(args.audio_source_folder) if audio.endswith('.wav')]
 
     seed = torch.randint(0, 4294967294, [1], device='cuda').item()
-    generator = torch.Generator(device='cpu')
-    generator = generator.manual_seed(seed)
 
     if not args.custom_batch_name:
         output_folder = f"{str(args.output_path)}\\{str(args.mode)}\\{str(args.model_name)}"
@@ -556,7 +554,6 @@ def generate(window, values):
                 model_fn, 
                 sampler_args, 
                 model_args,
-                generator
                 )
             results = save_audio(
                 data, 
@@ -581,7 +578,6 @@ def generate(window, values):
                     model_args, 
                     args.noise_level, 
                     var_job,
-                    generator
                     )
                 save_name = os.path.splitext(os.path.basename(var_job))[0]
                 results += save_audio(
@@ -606,7 +602,6 @@ def generate(window, values):
                 args.audio_target, 
                 args.interpolations_linear,
                 args.noise_level,
-                generator
                 )
             results = save_audio(
                 data, 
