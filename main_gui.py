@@ -5,7 +5,6 @@ splash.read(timeout=0)
 
 from util.gui import *
 from util.constants import *
-from util.components import *
 import library.dance_diffusion as dd
 
 
