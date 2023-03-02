@@ -4,6 +4,7 @@ script_folder = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(script_folder)
 import PySimpleGUI as sg
 from trim_model import start_trim, prune_latent_uncond
+from util.gui import refresh_models
 
 # get script folder
 
@@ -83,3 +84,4 @@ def handle_event_values(event, values):
     if event in ('ext_model_importer_FINISH_IMPORT', 'ext_model_importer_FINISH_TRIM'):
         window['ext_model_importer_IMPORT'].update(disabled=False)
         window['ext_model_importer_TRIMONLY'].update(disabled=False)
+        refresh_models(window)
