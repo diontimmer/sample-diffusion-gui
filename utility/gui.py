@@ -358,9 +358,9 @@ def get_args_object():
     args_object.chunk_size = 65536
     args_object.mode = 'Generation'
     args_object.batch_size = 1
-    args_object.audio_source = None
-    args_object.audio_source_folder = None
-    args_object.audio_target = None
+    args_object.audio_source = ''
+    args_object.audio_source_folder = ''
+    args_object.audio_target = ''
     args_object.noise_level = 0.7
     args_object.interpolations_linear = 3
     args_object.steps = 50
@@ -498,7 +498,9 @@ def generate(window, values):
     model_filename = os.path.basename(args.model).split('.')[0]
     args.model_name = ''.join(model_filename.split('_')[:-2])
     args.chunk_size = int(eval(str(args.chunk_size)))
-    args.audio_source = None if args.audio_source == '' or not os.path.exists(args.audio_source) else args.audio_source
+    args.audio_source = '' if args.audio_source == None else args.audio_source
+    if args.audio_source != '':
+        args.audio_source = args.audio_source if os.path.exists(args.audio_source) else ''
     args.sampler_args = {'use_tqdm': True, 'eta': args.ddim_eta}
 
     # check paths
@@ -539,7 +541,7 @@ def generate(window, values):
     if args.gen_wave != 'None':
         varlist = [create_signal(args.gen_keys.split(', '), args.sample_rate, int(args.chunk_size) * 2, args.gen_amp, args.gen_wave, 'tmp')]
     
-    elif args.audio_source_folder is not None:
+    elif args.audio_source_folder is not None and not '':
         varlist = [os.path.join(args.audio_source_folder, audio) for audio in os.listdir(args.audio_source_folder) if audio.endswith('.wav')]
 
     if not args.custom_batch_name:
