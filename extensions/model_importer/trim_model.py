@@ -1,8 +1,8 @@
 import os
 import torch
 import time
-from library.audio_diffusion.autoencoders import AudioAutoencoder
-from library.audio_diffusion.models import LatentAudioDiffusion
+# from library.audio_diffusion.autoencoders import AudioAutoencoder
+# from library.audio_diffusion.models import LatentAudioDiffusion
 #from trainers.trainers import LatentAudioDiffusionTrainer
 from torch.nn.parameter import Parameter
 
@@ -74,32 +74,32 @@ def prune_ckpt_weights(trainer_state_dict):
           
   return new_state_dict
 
-def prune_latent_uncond(model_path, output_path, sample_rate, ld_sample_size):
-    print("Creating the model...")
+# def prune_latent_uncond(model_path, output_path, sample_rate, ld_sample_size):
+#     print("Creating the model...")
 
-    ae_config = {"channels": 64, "c_mults": [2, 4, 8, 16, 32], "strides": [2, 2, 2, 2, 2], "latent_dim": 32}
+#     ae_config = {"channels": 64, "c_mults": [2, 4, 8, 16, 32], "strides": [2, 2, 2, 2, 2], "latent_dim": 32}
 
-    autoencoder = AudioAutoencoder( 
-        **ae_config
-    ).eval()
+#     autoencoder = AudioAutoencoder( 
+#         **ae_config
+#     ).eval()
 
-    latent_diffusion_config = {"io_channels": 32, "n_attn_layers": 4, "channels": [512]*6 + [1024]*4, "depth": 10}
+#     latent_diffusion_config = {"io_channels": 32, "n_attn_layers": 4, "channels": [512]*6 + [1024]*4, "depth": 10}
 
-    #Create the diffusion model itself
-    latent_diffusion_model = LatentAudioDiffusion(autoencoder, **latent_diffusion_config)
+#     #Create the diffusion model itself
+#     latent_diffusion_model = LatentAudioDiffusion(autoencoder, **latent_diffusion_config)
 
-    #Create the trainer
-    #ld_trainer = LatentAudioDiffusionTrainer(latent_diffusion_model)
+#     #Create the trainer
+#     #ld_trainer = LatentAudioDiffusionTrainer(latent_diffusion_model)
 
-    trainer_state_dict = torch.load(model_path)["state_dict"]
+#     trainer_state_dict = torch.load(model_path)["state_dict"]
 
-    new_ckpt = {}
+#     new_ckpt = {}
 
-    new_ckpt["ld_state_dict"] = prune_ckpt_weights(trainer_state_dict)
-    new_ckpt["ld_config"] = latent_diffusion_config
-    new_ckpt["sample_rate"] = sample_rate
-    new_ckpt["ld_sample_size"] = ld_sample_size
+#     new_ckpt["ld_state_dict"] = prune_ckpt_weights(trainer_state_dict)
+#     new_ckpt["ld_config"] = latent_diffusion_config
+#     new_ckpt["sample_rate"] = sample_rate
+#     new_ckpt["ld_sample_size"] = ld_sample_size
 
-    latent_diffusion_model.load_state_dict(new_ckpt["ld_state_dict"])
+#     latent_diffusion_model.load_state_dict(new_ckpt["ld_state_dict"])
 
-    torch.save(new_ckpt, f'output_path')
+#     torch.save(new_ckpt, f'output_path')

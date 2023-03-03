@@ -3,8 +3,8 @@ import sys
 script_folder = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(script_folder)
 import PySimpleGUI as sg
-from trim_model import start_trim, prune_latent_uncond
-from util.gui import refresh_models
+from trim_model import start_trim
+from utility.gui import refresh_models
 
 # get script folder
 

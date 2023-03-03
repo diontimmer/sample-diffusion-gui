@@ -3,9 +3,9 @@ import glob
 import PySimpleGUI as sg
 import PySimpleGUIQt as sgqt
 from threading import Thread
-from util.scripts.note_detect import detect_notes
-from util.scripts.generate_wave import create_signal
-from util.scripts.merge_models_ratio import ratio_merge
+from utility.scripts.note_detect import detect_notes
+from utility.scripts.generate_wave import create_signal
+from utility.scripts.merge_models_ratio import ratio_merge
 import torch
 import torchaudio
 import gc
@@ -14,15 +14,19 @@ import sys
 import time
 import tkinter as tk
 import shutil
-from torch.cuda import empty_cache
-import library.dance_diffusion as dd
-from library.dance_diffusion import Object
+from types import SimpleNamespace
 from pydub import AudioSegment, effects
 import subprocess
 from importlib import import_module
 import PySide2.QtCore as QtCore
 import yaml
-from util.constants import *
+from utility.constants import *
+
+sys.path.append('sample_diffusion') 
+
+from sample_diffusion.util.util import load_audio, cropper
+from sample_diffusion.util.platform import get_torch_device_type
+from sample_diffusion.dance_diffusion.api import RequestHandler, Request, Response, RequestType, SamplerType, SchedulerType, ModelType
 
 # block pygame welcome message
 
@@ -59,9 +63,6 @@ def load_theme(qt=False):
             return 'Custom'
         else:
             return config['theme']
-
-
-
 
 
 def get_config_value(key):
@@ -103,9 +104,9 @@ def show_drop_window(window, target):
             self.Widget.dragMoveEvent = self.dragMoveEvent
             self.Widget.dropEvent = self.dropEvent
     
-    layout = [[Image(filename='util/data/drop_arrow.png', size=(128, 128), enable_events=True, key='IMAGE')], [sgqt.Text('Please drop your audio files!')]]
+    layout = [[Image(filename='utility/data/drop_arrow.png', size=(128, 128), enable_events=True, key='IMAGE')], [sgqt.Text('Please drop your audio files!')]]
     
-    drop_window = sgqt.Window("Drop Window", layout, finalize=True, icon='util/data/dtico2.ico', resizable=False)
+    drop_window = sgqt.Window("Drop Window", layout, finalize=True, icon='utility/data/dtico2.ico', resizable=False)
     drop_window['IMAGE'].enable_drop()
     drop_window.QT_QMainWindow.setWindowFlags(drop_window.QT_QMainWindow.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
     drop_window.QT_QMainWindow.show()
@@ -172,7 +173,7 @@ def load_settings(window):
     if os.path.exists('saved.sdsettings'):
         with open('saved.sdsettings', 'rb') as f:
             saved_settings = pickle.load(f)
-        update_sigma(window, saved_settings['alt_sigma'])
+        #update_sigma(window, saved_settings['alt_sigma'])
         update_input_path(window, saved_settings['gen_wave'] != 'None')
         for key in saved_settings:
             if key not in not_load:
@@ -257,14 +258,23 @@ def show_save_window(window, values):
     # WARNINGS
     disable_confirm = False
     warnings = [[]]
-    if values['mode'] in ('Variation', 'Interpolation') and values['alt_sigma']:
-        warnings.append(create_warning('WARNING: Using alternative sigma func for variation/interp mode will not work!'))
-    if values['mode'] == 'Interpolation' and values['sampler'] != 'v-iplms':
-        warnings.append(create_warning('WARNING: Interpolations currently only work properly with the v-iplms sampler!'))
+    #if values['mode'] in ('Variation', 'Interpolation') and values['alt_sigma']:
+    #    warnings.append(create_warning('WARNING: Using alternative sigma func for variation/interp mode will not work!'))
+
+    if values['mode'] == 'Interpolation' and values['sampler'] == 'DDIM':
+        warnings.append(create_warning('ERROR: Interpolations currently do not work with the ddim sampler!'))
+        disable_confirm = True
+
+    if values['mode'] in ('Extension', 'Inpainting') and values['sampler'] != 'DDPM':
+        warnings.append(create_warning('ERROR: Extension/Inpainting only currently works with the DDPM sampler!'))
+        disable_confirm = True
+
     if values['sample_rate'] not in ['44100', '48000', '16000', '22050', '24000', '32000', '8000']:
         warnings.append(create_warning(f'WARNING: Unusual sample rate detected: {values["sample_rate"]}!'))
+
     if values['gen_wave'] != 'None' and values['mode'] in ('Variation', 'Interpolation'):
         warnings.append(create_warning(f'Wave gen variation enabled: {values["gen_wave"]}', color='orange'))
+
     if values['gen_wave'] == 'None' and values['mode'] == 'Variation' and values['audio_source_folder'] != '':
         warnings.append(create_warning(f'Batch folder variation enabled: {values["audio_source_folder"]}', color='orange'))
     if values['secondary_model'] != 'None' :
@@ -306,7 +316,7 @@ def show_save_window(window, values):
     popup_layout = popup_layout + warnings
     
     # create the window
-    popup_window = sg.Window('Confirm', popup_layout, icon='util/data/dtico.ico', element_justification='center', finalize=True)
+    popup_window = sg.Window('Confirm', popup_layout, icon='utility/data/dtico.ico', element_justification='center', finalize=True)
 
     if disable_confirm:
         popup_window['Confirm'].update(disabled=True)
@@ -338,7 +348,7 @@ def out_file_exists(output_folder, modelname, id_str, ix):
     return False
 
 def get_args_object():
-    args_object = Object()
+    args_object = SimpleNamespace()
     args_object.model = 'models/dd/model.ckpt'
     args_object.sample_rate = 48000
     args_object.chunk_size = 65536
@@ -350,16 +360,29 @@ def get_args_object():
     args_object.noise_level = 0.7
     args_object.interpolations_linear = 3
     args_object.steps = 50
-    args_object.sampler = 'v-iplms'
+    args_object.sampler = 'IPLMS'
     args_object.output_path = None
     args_object.model_name = None
+    args_object.tame = True
     args_object.custom_batch_name = None
+    args_object.use_autocrop = True
+    args_object.use_autocast = True
     args_object.gen_wave = 'None'
     args_object.gen_keys = 'C4, C5, C6'
+    args_object.keep_start = True
+    args_object.seed = -1
+    args_object.resamples = 5
     args_object.gen_amp = 100
+    args_object.schedule = 'CrashSchedule'
+    args_object.sampler_args = {'use_tqdm': True}
+    args_object.schedule_args = {}
+    args_object.mask = ''
+    args_object.device_accelerator = 'cuda'
+    args_object.device_offload = 'cuda'
+    args_object.ddim_eta = 0
     return args_object
 
-def save_audio(audio_out, output_folder: str, sample_rate, id_str:str = None, modelname='Sample', custom_batch_name=None):
+def save_audio(audio_out, output_folder: str, sample_rate, id_str:str = None, modelname='Sample'):
     saved_paths = []
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -435,15 +458,6 @@ def get_args_from_window(values):
                     setattr(args, key, float(getattr(args, key)))
                 except ValueError:
                     pass
-
-    args.model = 'models/' + args.model
-    model_filename = os.path.basename(args.model).split('.')[0]
-    args.model_name = ''.join(model_filename.split('_')[:-2])
-    args.chunk_size = int(eval(str(args.chunk_size)))
-    if values['audio_source'] == '' or not os.path.exists(values['audio_source']):
-        args.audio_source = None
-    else: 
-        args.audio_source = values['audio_source']
     return args
 
 def preview_keys(window, values):
@@ -475,14 +489,18 @@ def generate(window, values):
     window['Generate'].update(disabled=True)
     window['-LOADINGGIF-'].update(visible=True)
     args = get_args_from_window(values)
-    varlist = [args.audio_source]
+
+    args.model = 'models/' + args.model
+    model_filename = os.path.basename(args.model).split('.')[0]
+    args.model_name = ''.join(model_filename.split('_')[:-2])
+    args.chunk_size = int(eval(str(args.chunk_size)))
+    args.audio_source = None if args.audio_source == '' or not os.path.exists(args.audio_source) else args.audio_source
+    args.sampler_args = {'use_tqdm': True, 'eta': args.ddim_eta}
 
     # check paths
     if args.mode in ('Variation', 'Interpolation'):
         if args.audio_source is None and args.gen_wave == 'None' and args.audio_source_folder is None:
             print('Please select an audio source or wave gen for variation mode.')
-            window['Generate'].update(disabled=False)
-            window['-LOADINGGIF-'].update(visible=False)
             return
 
     if args.mode == 'Interpolation' and args.audio_target is None:
@@ -491,40 +509,34 @@ def generate(window, values):
         window['-LOADINGGIF-'].update(visible=False)
         return
 
-    # start batch
+    device_type_accelerator = args.device_accelerator if(args.device_accelerator != None) else get_torch_device_type()
+    device_accelerator = torch.device(device_type_accelerator)
+    device_offload = torch.device(args.device_offload)
+    autocrop = cropper(args.chunk_size, True) if(args.use_autocrop==True) else lambda audio: audio
+    request_handler = RequestHandler(device_accelerator, device_offload, optimize_memory_use=False, use_autocast=args.use_autocast)
+    seed = args.seed if(args.seed!=-1) else torch.randint(0, 4294967294, [1], device=device_type_accelerator).item()
+    request_type = RequestType[args.mode]
+    model_type = ModelType.DD
+    sampler_type = SamplerType[args.sampler]
+    scheduler_type = SchedulerType[args.schedule]
+    batch_name = f"{args.model_name}_{time.strftime('%Y-%m-%d_%H-%M-%S')}" if not args.custom_batch_name else args.custom_batch_name
+    id_str = seed
+
+
     clear_tree(window)
+
     if values['secondary_model'] != 'None':
         print('Merging models..')
         ratio_merge(f'models/{values["model"]}', f'models/{values["secondary_model"]}', alpha=float(values['merge_ratio']), out_file='models/sec_mrg_buffer.ckpt')
         args.model = 'models/sec_mrg_buffer.ckpt'
-    batch_name = f"{args.model_name}_{time.strftime('%Y-%m-%d_%H-%M-%S')}" if not args.custom_batch_name else args.custom_batch_name
     
-    model_args = dd.create_model_args(
-        model_name=args.model_name,
-        sample_size=args.chunk_size, 
-        sample_rate=args.sample_rate, 
-        latent_dim=0, 
-        ckpt_path=args.model
-        )
-    sampler_args = dd.create_sampler_args(
-        sampler_type=values['sampler'],
-        eta=float(values['ddim_eta']),
-        alt_sigma=bool(values['alt_sigma']), 
-        sigma_min=float(values['sigma_min']), 
-        sigma_max=float(values['sigma_max']), 
-        rho=float(values['rho']), 
-        rtol=float(values['rtol']),
-        atol=float(values['atol'])
-        )
 
-    model_fn = dd.create_model(model_args)
+    varlist = [args.audio_source]
     if args.gen_wave != 'None':
-        varlist = [create_signal(args.gen_keys.split(', '), model_args.sample_rate, int(model_args.sample_size) * 2, args.gen_amp, args.gen_wave, 'tmp')]
-
+        varlist = [create_signal(args.gen_keys.split(', '), args.sample_rate, int(args.chunk_size) * 2, args.gen_amp, args.gen_wave, 'tmp')]
+    
     elif args.audio_source_folder is not None:
         varlist = [os.path.join(args.audio_source_folder, audio) for audio in os.listdir(args.audio_source_folder) if audio.endswith('.wav')]
-
-    seed = torch.randint(0, 4294967294, [1], device='cuda').item()
 
     if not args.custom_batch_name:
         output_folder = f"{str(args.output_path)}\\{str(args.mode)}\\{str(args.model_name)}"
@@ -532,82 +544,58 @@ def generate(window, values):
         output_folder = f"{str(args.output_path)}\\{str(args.mode)}\\{str(args.custom_batch_name)}"
 
 
-
-
-
+    print(f"Using accelerator: {device_type_accelerator}, Seed: {seed}.")
     for i in range(int(values['batch_loop'])):
         print(f'Processing loop {i+1}/{values["batch_loop"]}')
-
-        if args.mode == 'Generation':
-            window['progbar'].update_bar(0)
-            data = dd.generate_func(
-                args.batch_size, 
-                args.steps, 
-                model_fn, 
-                sampler_args, 
-                model_args,
-                )
-            results = save_audio(
-                data, 
-                output_folder=output_folder, 
-                sample_rate=model_args.sample_rate, 
-                id_str=seed, 
-                modelname=model_args.model_name, 
-                custom_batch_name=args.custom_batch_name)
-            insert_results_to_tree(batch_name, results, window)
-
-
-
-        elif args.mode == 'Variation':
-            results = []
-            for var_job in varlist:
-                window['progbar'].update_bar(0)
-                print('Processing variation job on: ' + var_job)
-                data = dd.variation_func(
-                    args.batch_size, 
-                    args.steps, 
-                    model_fn, 
-                    sampler_args, 
-                    model_args, 
-                    args.noise_level, 
-                    var_job,
-                    )
-                save_name = os.path.splitext(os.path.basename(var_job))[0]
-                result = save_audio(
-                    data, 
-                    output_folder=output_folder, 
-                    sample_rate=model_args.sample_rate, 
-                    id_str=save_name, 
-                    modelname=model_args.model_name, 
-                    custom_batch_name=args.custom_batch_name)
-                results += result
-                insert_results_to_tree(batch_name, result, window)
-
-
-
-        elif args.mode == 'Interpolation':
-            window['progbar'].update_bar(0)
-            data = dd.interpolation_func(
-                args.batch_size, 
-                args.steps, 
-                model_fn, 
-                sampler_args, 
-                model_args, 
-                args.audio_source, 
-                args.audio_target, 
-                args.interpolations_linear,
-                args.noise_level,
-                )
-            results = save_audio(
-                data, 
-                output_folder=output_folder, 
-                sample_rate=model_args.sample_rate, 
-                id_str=seed, 
-                modelname=model_args.model_name, 
-                custom_batch_name=args.custom_batch_name)
-            insert_results_to_tree(batch_name, results, window)
-        empty_cache()
+        
         gc.collect()
+        torch.cuda.empty_cache()
+
+        for source in varlist:
+            if args.mode == 'Variation':
+                save_name = os.path.splitext(os.path.basename(source))[0]
+                id_str = f'{save_name}_{seed}'
+
+
+            source = None if source == '' else source
+            request = Request(
+                request_type=request_type,
+                model_path=args.model,
+                model_type=model_type,
+                model_chunk_size=args.chunk_size,
+                model_sample_rate=args.sample_rate,
+                
+                seed=seed,
+                batch_size=args.batch_size,
+                
+                audio_source=autocrop(load_audio(device_accelerator,source, args.sample_rate)) if(source != None) else None,
+                audio_target=autocrop(load_audio(device_accelerator,args.audio_target, args.sample_rate)) if(args.audio_target != None) else None,
+                mask=torch.load(args.mask) if(args.mask != None) else None,
+                
+                noise_level=args.noise_level,
+                interpolation_positions=args.interpolations if(args.interpolations_linear == None) else torch.linspace(0, 1, args.interpolations_linear, device=device_accelerator),
+                resamples=args.resamples,
+                keep_start=args.keep_start,
+                        
+                steps=args.steps,
+                
+                sampler_type=sampler_type,
+                sampler_args=args.sampler_args,
+                
+                scheduler_type=scheduler_type,
+                scheduler_args=args.schedule_args
+            )
+            
+            response = request_handler.process_request(request)#, lambda **kwargs: print(f"{kwargs['step'] / kwargs['x']}"))
+            results = save_audio(
+                (0.5 * response.result).clamp(-1,1) if(args.tame == True) else response.result, 
+                output_folder=output_folder, 
+                sample_rate=args.sample_rate, 
+                id_str=id_str,
+                modelname=args.model_name)
+    
+            insert_results_to_tree(batch_name, results, window)
+        
 
     print('Process Finished!')
     if os.path.exists('models/sec_mrg_buffer.ckpt'):
@@ -615,10 +603,7 @@ def generate(window, values):
     if args.gen_wave != 'None':
         os.remove(varlist[0])
     window['Generate'].update(disabled=False)
-    window['-LOADINGGIF-'].update(visible=False)
-
-
-
+    window['-LOADINGGIF-'].update(visible=False)    
 
 
 

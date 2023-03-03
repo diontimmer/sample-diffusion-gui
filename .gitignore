@@ -66,3 +66,4 @@ tmp
 venv
 wandb
 training_demos
+sample_diffusion

@@ -112,6 +112,8 @@ if __name__ == "__main__":
     # INSTALL
 
     if not SKIP_INSTALL:
+        if not os.path.exists('sample_diffusion'):
+            run(f'git clone https://github.com/sudosilico/sample-diffusion sample_diffusion', "Cloning sample-diffusion repo.", "Couldn't clone sample-diffusion repo", live=True)
 
         # pre torch packages
         if pre_torch_packages:
@@ -146,5 +148,6 @@ if __name__ == "__main__":
                 elif platform == 'darwin':
                     prRed('No FFMPEG detected! Please use homebrew "brew install ffmpeg" to install before using the GUI!')
                     exit()
+
     # LAUNCH
     run(f'"{sys.executable}" {main_script_path}', "Launch success! Starting main script, this might take a bit..", "MAIN SCRIPT CRASH", live=True)

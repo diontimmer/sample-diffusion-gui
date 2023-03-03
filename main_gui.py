@@ -1,14 +1,26 @@
 import PySimpleGUI as sg
 
-splash = sg.Window('Window Title', [[sg.Image(filename='util/data/splash.png')]], transparent_color=sg.theme_background_color(), no_titlebar=True, keep_on_top=True)
+
+version = '0.8.0'
+redirect = True #True will make prog bar work, but will not redirect errors
+if redirect:
+    print('Starting with redirect=True, progress bar will work and errors are routed to log.txt')
+
+
+splash = sg.Window('Window Title', [[sg.Image(filename='utility/data/splash.png')]], transparent_color=sg.theme_background_color(), no_titlebar=True, keep_on_top=True)
 splash.read(timeout=0)
 
-from util.gui import *
-from util.constants import *
-import library.dance_diffusion as dd
+from utility.gui import *
+from utility.constants import *
+from sample_diffusion.dance_diffusion.api import RequestType, SamplerType, SchedulerType 
 
+from io import StringIO
 
+# Redirect stdout to a StringIO object
 
+if redirect:
+    buffer = StringIO()
+    sys.stderr = buffer
 
 sg.theme(load_theme())   # Add a touch of color
 sg.set_options(suppress_raise_key_errors=False, suppress_error_popups=True, suppress_key_guessing=True)
@@ -20,7 +32,7 @@ tree_layout = [
 
 settings_main = sg.Column([
                     [sg.T('Model File', tooltip='Path to the model checkpoint file to be used.'), sg.Combo([], key='model', default_value='', enable_events=True, size=(30,0))],
-                    [sg.T('Mode', tooltip='The mode of operation'), sg.Combo(['Generation', 'Interpolation', 'Variation'], default_value=default_settings['mode'], key='mode')],
+                    [sg.T('Mode', tooltip='The mode of operation'), sg.Combo(RequestType._member_names_, default_value=default_settings['mode'], key='mode')],
                     [sg.T('Output Path', tooltip='Path for output renders.'), sg.InputText('output', key='output_path'), sg.FolderBrowse()],
                     [sg.T('Batch Loop', tooltip='The number of times the internal batch size will loop.'), sg.InputText('1', key='batch_loop', size=(8,0), enable_events=True)],
                     [sg.T('Internal Batch Size', tooltip='The maximal number of samples to be produced per batch.'), sg.InputText(default_settings['batch_size'], key='batch_size', size=(15,0), enable_events=True), sg.T('Total output files: 1', tooltip='Batch Loop * Internal Batch Size', key='batch_viewer', text_color='yellow')],
@@ -47,14 +59,15 @@ settings_add = sg.Column([
 
 settings_sampler = sg.Column([
                     [sg.T('Steps', tooltip='The number of steps for the sampler.'), sg.InputText(default_settings['steps'], key='steps', size=(15,0))],
-                    [sg.T('Sampler', tooltip='The sampler used for the diffusion model.'), sg.Combo(['v-ddim', 'v-iplms', 'k-heun', 'k-lms', 'k-dpmpp_2s_ancestral', 'k-dpm-2', 'k-dpm-fast', 'k-dpm-adaptive'], default_value='v-iplms', key='sampler')],
-                    [sg.T('V-ETA'), sg.InputText('0', key='ddim_eta', size=(5,0))],
-                    [sg.Checkbox('K-Alt Sigma Function', default=False, key='alt_sigma', enable_events=True)],
-                    [sg.T('K-Sigma Min', key='smintext'), sg.InputText('0.0001', key='sigma_min', size=(7,0), disabled_readonly_background_color='DarkGrey')],
-                    [sg.T('K-Sigma Max', key='smaxtext'), sg.InputText('80', key='sigma_max', size=(7,0), disabled_readonly_background_color='DarkGrey')],
-                    [sg.T('K-RHO'), sg.InputText('7', key='rho', size=(5,0))],
-                    [sg.T('K-adaptive-RTOL'), sg.InputText('0.01', key='rtol', size=(5,0))],
-                    [sg.T('K-adaptive-ATOL'), sg.InputText('0.01', key='atol', size=(5,0))],
+                    [sg.T('Sampler', tooltip='The sampler used for the diffusion model.'), sg.Combo(SamplerType._member_names_, default_value=default_settings['sampler'], key='sampler')],
+                    [sg.T('Schedule', tooltip='The schedule used for the sampler.'), sg.Combo(SchedulerType._member_names_, default_value='CrashSchedule', key='schedule')],
+                    [sg.T('DDIM-ETA'), sg.InputText('0', key='ddim_eta', size=(5,0))],
+                    #[sg.Checkbox('K-Alt Sigma Function', default=False, key='alt_sigma', enable_events=True)],
+                    #[sg.T('K-Sigma Min', key='smintext'), sg.InputText('0.0001', key='sigma_min', size=(7,0), disabled_readonly_background_color='DarkGrey')],
+                    #[sg.T('K-Sigma Max', key='smaxtext'), sg.InputText('80', key='sigma_max', size=(7,0), disabled_readonly_background_color='DarkGrey')],
+                    #[sg.T('K-RHO'), sg.InputText('7', key='rho', size=(5,0))],
+                    #[sg.T('K-adaptive-RTOL'), sg.InputText('0.01', key='rtol', size=(5,0))],
+                    #[sg.T('K-adaptive-ATOL'), sg.InputText('0.01', key='atol', size=(5,0))],
                     ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
 
 tabs = [sg.TabGroup([[sg.Tab('Main Settings', [[settings_main]], expand_y=False), sg.Tab('Additional Settings', [[settings_add]]), sg.Tab('Sampler Settings', [[settings_sampler]])]], expand_x=True, expand_y=True, key='tab_group')]
@@ -67,15 +80,13 @@ prog_bar = sg.ProgressBar(100, size=(0, 30), expand_x=True, key='progbar')
 
 bottom_column = sg.Column([buttons, [prog_bar]], expand_x=True, expand_y=False)
 
-window = sg.Window('Vextra Diffusion Toolkit', [
+window = sg.Window(f'Vextra Diffusion Toolkit v{version}', [
     #[sg.Titlebar(title='', icon='util/data/dtico.png')],
     [sg.Frame('Preview', tree_layout, expand_x=True, expand_y=True, size=(0,250))],
     tabs,
     [bottom_column],
-    #prog_bar,  
-    #buttons,
     [sg.Sizer(0, 10)], 
-    ], finalize=True, icon='util/data/dtico2.ico', enable_close_attempted_event=True, resizable=True, size=(700,750), keep_on_top=get_config_value('stay_on_top'))
+    ], finalize=True, icon='utility/data/dtico2.ico', enable_close_attempted_event=True, resizable=True, size=(700,750), keep_on_top=get_config_value('stay_on_top'))
 
 window.set_min_size((670,615))
 splash.close()
@@ -90,14 +101,33 @@ refresh_models(window)
 set_total_output(window)
 set_total_seconds(window)
 prog_bar.update_bar(100, 100)
-dd.prog_bar = prog_bar
+curprog = 100
 
 while True:
     event, values = window.read(timeout=10)
     loading_gif_img.update_animation(LOADING_GIF_B64, time_between_frames=50)
+    if redirect:
+        try:
+            bufferval = buffer.getvalue()
+            with open('log.txt', 'w') as log:
+                if bufferval:
+                    log.write(bufferval)
+                percentage = bufferval.strip().split('\r')[-1].split('%')[0]
+                if buffer.getvalue() and percentage != '':            
+                    if int(percentage) != curprog:
+                        prog_bar.update_bar(int(percentage), 100)
+                        curprog = int(percentage)
+    
+        except:
+            pass
+
+
+
     if event in (sg.WINDOW_CLOSE_ATTEMPTED_EVENT, 'Exit'):
         save_settings(values)
         break
+
+
 
     if event.startswith('clear_'):
         window[event.replace('clear_', '')].update(value='')
