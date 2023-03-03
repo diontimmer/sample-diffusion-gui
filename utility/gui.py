@@ -265,6 +265,10 @@ def show_save_window(window, values):
         warnings.append(create_warning('ERROR: Interpolations currently do not work with the ddim sampler!'))
         disable_confirm = True
 
+    if values['mode'] == 'Inpainting':
+        warnings.append(create_warning('ERROR: Inpainting is not yet properly implemented!'))
+        disable_confirm = True
+
     if values['mode'] in ('Extension', 'Inpainting') and values['sampler'] != 'DDPM':
         warnings.append(create_warning('ERROR: Extension/Inpainting only currently works with the DDPM sampler!'))
         disable_confirm = True
