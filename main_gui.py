@@ -39,7 +39,7 @@ settings_main = sg.Column([
                     [sg.T('Custom Batch Name', tooltip='Custom batch name for filenames.'), sg.InputText('', key='custom_batch_name', size=(15,0), enable_events=True)],
                     [sg.T('Sample Rate', tooltip='  The samplerate the model was trained on.'), sg.InputText(default_settings['sample_rate'], key='sample_rate', size=(8,0), enable_events=True)],
                     [sg.T('Chunk Size', tooltip='The native chunk size of the model.'), sg.InputText(default_settings['chunk_size'], key='chunk_size', size=(8,0), enable_events=True), sg.T('', key='total_seconds')],
-                    #[sg.T('Seed', tooltip='The seed used for reproducable outputs. -1 for random seed.'), sg.InputText(default_settings['seed'], key='seed', size=(8,0))],
+                    [sg.T('Seed', tooltip='The seed used for reproducable outputs. -1 for random seed.'), sg.InputText(default_settings['seed'], key='seed', size=(8,0))],
                     [sg.T('Secondary Model File', tooltip='Secondary model file used for merging.'), sg.Combo([], key='secondary_model', default_value='None', enable_events=True, size=(30,0))],
                     [sg.T('Secondary Merge Ratio', tooltip='Merge ratio for model merging [A-B] -> [0-1]'), sg.InputText('0.5', key='merge_ratio', size=(5,0), enable_events=True)],                    
                     ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
@@ -52,6 +52,8 @@ settings_add = sg.Column([
                     [sg.T('Generate Wave Amplitude', tooltip='Amp for the generated wave.'), sg.InputText(default_settings['gen_amp'], key='gen_amp', size=(15,0))],
                     [sg.T('Interp Audio Target Path', tooltip='Path to the audio target (used for interpolations).'), sg.Button('❌', key='clear_audio_target', button_color=sg.theme_background_color(), border_width=0), sg.InputText(default_settings['audio_target'], key='audio_target'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),)), sg.Button('Drop', key='drop_target')],
                     [sg.T('Interp Steps', tooltip='The number of interpolations.'), sg.InputText(default_settings['interpolations_linear'], key='interpolations_linear', size=(5,0))],
+                    [sg.Checkbox('Use Autocast', default=default_settings['use_autocast'], key='use_autocast'), sg.Checkbox('Use Autocrop', default=default_settings['use_autocrop'], key='use_autocrop')],
+                    [sg.Checkbox('Tame', default=default_settings['tame'], key='tame')],
                     [sg.T('Noise Level', tooltip='The noise level (used for variations & interpolations).'), sg.InputText(default_settings['noise_level'], key='noise_level', size=(15,0))],
                     ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
 
@@ -62,6 +64,7 @@ settings_sampler = sg.Column([
                     [sg.T('Sampler', tooltip='The sampler used for the diffusion model.'), sg.Combo(SamplerType._member_names_, default_value=default_settings['sampler'], key='sampler')],
                     [sg.T('Schedule', tooltip='The schedule used for the sampler.'), sg.Combo(SchedulerType._member_names_, default_value='CrashSchedule', key='schedule')],
                     [sg.T('DDIM-ETA'), sg.InputText('0', key='ddim_eta', size=(5,0))],
+                    [sg.T('Resamples'), sg.InputText(default_settings['resamples'], key='resamples', size=(5,0))],
                     #[sg.Checkbox('K-Alt Sigma Function', default=False, key='alt_sigma', enable_events=True)],
                     #[sg.T('K-Sigma Min', key='smintext'), sg.InputText('0.0001', key='sigma_min', size=(7,0), disabled_readonly_background_color='DarkGrey')],
                     #[sg.T('K-Sigma Max', key='smaxtext'), sg.InputText('80', key='sigma_max', size=(7,0), disabled_readonly_background_color='DarkGrey')],
