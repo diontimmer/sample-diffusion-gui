@@ -541,7 +541,7 @@ def generate(window, values):
     if args.gen_wave != 'None':
         varlist = [create_signal(args.gen_keys.split(', '), args.sample_rate, int(args.chunk_size) * 2, args.gen_amp, args.gen_wave, 'tmp')]
     
-    elif args.audio_source_folder is not None and not '':
+    elif args.audio_source_folder is not None and not '' and args.mode =='Variation':
         varlist = [os.path.join(args.audio_source_folder, audio) for audio in os.listdir(args.audio_source_folder) if audio.endswith('.wav')]
 
     if not args.custom_batch_name:
