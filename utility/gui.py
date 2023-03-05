@@ -520,7 +520,6 @@ def generate(window, values):
     device_offload = torch.device(args.device_offload)
     autocrop = cropper(args.chunk_size, True) if(args.use_autocrop==True) else lambda audio: audio
     request_handler = RequestHandler(device_accelerator, device_offload, optimize_memory_use=False, use_autocast=args.use_autocast)
-    seed = args.seed if(args.seed!=-1) else torch.randint(0, 4294967294, [1], device=device_type_accelerator).item()
     request_type = RequestType[args.mode]
     model_type = ModelType.DD
     sampler_type = SamplerType[args.sampler]
@@ -556,7 +555,7 @@ def generate(window, values):
         
         gc.collect()
         torch.cuda.empty_cache()
-
+        seed = args.seed if(args.seed!=-1) else torch.randint(0, 4294967294, [1], device=device_type_accelerator).item()
         for source in varlist:
             if args.mode == 'Variation':
                 save_name = os.path.splitext(os.path.basename(source))[0]
