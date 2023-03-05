@@ -525,7 +525,6 @@ def generate(window, values):
     sampler_type = SamplerType[args.sampler]
     scheduler_type = SchedulerType[args.schedule]
     batch_name = f"{args.model_name}_{time.strftime('%Y-%m-%d_%H-%M-%S')}" if not args.custom_batch_name else args.custom_batch_name
-    id_str = seed
 
 
     clear_tree(window)
@@ -556,6 +555,7 @@ def generate(window, values):
         gc.collect()
         torch.cuda.empty_cache()
         seed = args.seed if(args.seed!=-1) else torch.randint(0, 4294967294, [1], device=device_type_accelerator).item()
+        id_str = seed
         for source in varlist:
             if args.mode == 'Variation':
                 save_name = os.path.splitext(os.path.basename(source))[0]
