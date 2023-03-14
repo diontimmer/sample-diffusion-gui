@@ -24,7 +24,7 @@ from utility.constants import *
 
 sys.path.append('sample_diffusion') 
 
-from sample_diffusion.util.util import load_audio, cropper
+from sample_diffusion.util.util import load_audio, crop_audio
 from sample_diffusion.util.platform import get_torch_device_type
 from sample_diffusion.dance_diffusion.api import RequestHandler, Request, Response, RequestType, SamplerType, SchedulerType, ModelType
 
@@ -369,7 +369,7 @@ def get_args_object():
     args_object.model_name = None
     args_object.tame = True
     args_object.custom_batch_name = None
-    args_object.use_autocrop = True
+    args_object.crop_offset = 0
     args_object.use_autocast = True
     args_object.gen_wave = 'None'
     args_object.gen_keys = 'C4, C5, C6'
@@ -515,10 +515,15 @@ def generate(window, values):
         window['-LOADINGGIF-'].update(visible=False)
         return
 
+    args.crop_offset = int(args.crop_offset)
     device_type_accelerator = args.device_accelerator if(args.device_accelerator != None) else get_torch_device_type()
     device_accelerator = torch.device(device_type_accelerator)
     device_offload = torch.device(args.device_offload)
-    autocrop = cropper(args.chunk_size, True) if(args.use_autocrop==True) else lambda audio: audio
+
+    crop = lambda audio: crop_audio(audio, args.chunk_size, args.crop_offset) if args.crop_offset is not None else audio
+    load_input = lambda source: crop(load_audio(device_accelerator, source, args.sample_rate)) if source is not None else None
+
+
     request_handler = RequestHandler(device_accelerator, device_offload, optimize_memory_use=False, use_autocast=args.use_autocast)
     request_type = RequestType[args.mode]
     model_type = ModelType.DD
@@ -571,8 +576,8 @@ def generate(window, values):
                 seed=seed,
                 batch_size=args.batch_size,
                 
-                audio_source=autocrop(load_audio(device_accelerator,source, args.sample_rate)) if(source != None) else None,
-                audio_target=autocrop(load_audio(device_accelerator,args.audio_target, args.sample_rate)) if(args.audio_target != None) else None,
+                audio_source=load_input(source),
+                audio_target=load_input(args.audio_target),
                 mask=torch.load(args.mask) if(args.mask != None) else None,
                 
                 noise_level=args.noise_level,
