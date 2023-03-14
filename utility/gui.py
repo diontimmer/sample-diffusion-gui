@@ -546,16 +546,14 @@ def generate(window, values):
         output_folder = f"{str(args.output_path)}\\{str(args.mode)}\\{str(args.model_name)}"
     else:
         output_folder = f"{str(args.output_path)}\\{str(args.mode)}\\{str(args.custom_batch_name)}"
-
-
-    print(f"Using accelerator: {device_type_accelerator}, Seed: {seed}.")
+        
     for i in range(int(values['batch_loop'])):
-        print(f'Processing loop {i+1}/{values["batch_loop"]}')
         
         gc.collect()
         torch.cuda.empty_cache()
         seed = args.seed if(args.seed!=-1) else torch.randint(0, 4294967294, [1], device=device_type_accelerator).item()
         id_str = seed
+        print(f'Processing loop {i+1}/{values["batch_loop"]}, Using accelerator: {device_type_accelerator}, Seed: {seed}.')
         for source in varlist:
             if args.mode == 'Variation':
                 save_name = os.path.splitext(os.path.basename(source))[0]
