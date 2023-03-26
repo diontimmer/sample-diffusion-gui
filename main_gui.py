@@ -1,10 +1,9 @@
 import PySimpleGUI as sg
+import os
+from utility.gui import get_themed_icon
 
 
-version = '0.8.0'
-redirect = True #True will make prog bar work, but will not redirect errors
-if redirect:
-    print('Starting with redirect=True, progress bar will work and errors are routed to log.txt')
+version = '0.8.1'
 
 
 splash = sg.Window('Window Title', [[sg.Image(filename='utility/data/splash.png')]], transparent_color=sg.theme_background_color(), no_titlebar=True, keep_on_top=True)
@@ -14,16 +13,12 @@ from utility.gui import *
 from utility.constants import *
 from sample_diffusion.dance_diffusion.api import RequestType, SamplerType, SchedulerType 
 
-from io import StringIO
-
-# Redirect stdout to a StringIO object
-
-if redirect:
-    buffer = StringIO()
-    sys.stderr = buffer
-
 sg.theme(load_theme())   # Add a touch of color
+sg.set_options(font='Helvetica 10')
 sg.set_options(suppress_raise_key_errors=False, suppress_error_popups=True, suppress_key_guessing=True)
+
+from utility.elements import CustomFolderBrowse, CustomFileBrowse
+
 
 tree_layout = [
                 [sg.Button('', key='Play', font='Helvetica 20', image_data=TOP_PLAY, button_color=sg.theme_background_color(), border_width=0), sg.Button('', key='Save', font='Helvetica 20', image_data=TOP_SAVE, button_color=sg.theme_background_color(), border_width=0), sg.Button('', key='Locate', font='Helvetica 20', image_data=TOP_FOLDER, button_color=sg.theme_background_color(), border_width=0), sg.Button('Load As Input'), sg.T('Preview Volume: '), sg.Slider(range=(0, 100), orientation='h', size=(50, 20), enable_events=True, key="-VOLUME-", default_value=100, disable_number_display=True)],
@@ -33,7 +28,7 @@ tree_layout = [
 settings_main = sg.Column([
                     [sg.T('Model File', tooltip='Path to the model checkpoint file to be used.'), sg.Combo([], key='model', default_value='', enable_events=True, size=(30,0))],
                     [sg.T('Mode', tooltip='The mode of operation'), sg.Combo(RequestType._member_names_, default_value=default_settings['mode'], key='mode')],
-                    [sg.T('Output Path', tooltip='Path for output renders.'), sg.InputText('output', key='output_path'), sg.FolderBrowse()],
+                    [sg.T('Output Path', tooltip='Path for output renders.'), sg.InputText('output', key='output_path'), CustomFolderBrowse()],
                     [sg.T('Batch Loop', tooltip='The number of times the internal batch size will loop.'), sg.InputText('1', key='batch_loop', size=(8,0), enable_events=True)],
                     [sg.T('Internal Batch Size', tooltip='The maximal number of samples to be produced per batch.'), sg.InputText(default_settings['batch_size'], key='batch_size', size=(15,0), enable_events=True), sg.T('Total output files: 1', tooltip='Batch Loop * Internal Batch Size', key='batch_viewer', text_color='yellow')],
                     [sg.T('Custom Batch Name', tooltip='Custom batch name for filenames.'), sg.InputText('', key='custom_batch_name', size=(15,0), enable_events=True)],
@@ -45,12 +40,12 @@ settings_main = sg.Column([
                     ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
 
 settings_add = sg.Column([
-                    [sg.T('Input Audio Path', key='ipathtext', tooltip='Path to audio (used for variations & interpolations).'), sg.Button('❌', key='clear_audio_source', button_color=sg.theme_background_color(), border_width=0), sg.InputText(default_settings['audio_source'], key='audio_source', disabled_readonly_background_color='DarkGrey'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),)), sg.Button('Drop', key='drop_source')],
-                    [sg.T('Input Folder Path', key='fpathtext', tooltip='Path to folder containing audio (used for variations & interpolations).'), sg.Button('❌', key='clear_audio_source_folder', button_color=sg.theme_background_color(), border_width=0), sg.InputText(default_settings['audio_source_folder'], key='audio_source_folder', disabled_readonly_background_color='DarkGrey'), sg.FolderBrowse()],
+                    [sg.T('Input Audio Path', key='ipathtext', tooltip='Path to audio (used for variations & interpolations).'), sg.Button('❌', key='clear_audio_source', button_color=sg.theme_background_color(), border_width=0), sg.InputText(default_settings['audio_source'], key='audio_source', disabled_readonly_background_color='DarkGrey'), CustomFileBrowse(file_types=(("Audio Files", ".wav .flac"),)), sg.Button('', image_data=get_themed_icon(DROP_ICON), key='drop_source', button_color=sg.theme_background_color(), border_width=0)],
+                    [sg.T('Input Folder Path', key='fpathtext', tooltip='Path to folder containing audio (used for variations & interpolations).'), sg.Button('❌', key='clear_audio_source_folder', button_color=sg.theme_background_color(), border_width=0), sg.InputText(default_settings['audio_source_folder'], key='audio_source_folder', disabled_readonly_background_color='DarkGrey'), CustomFolderBrowse()],
                     [sg.T('Generate Wave Input', tooltip='Generate wave for input (used for variations & interpolations).'), sg.Combo(['Sine', 'Square', 'Saw', 'None'], default_value=default_settings['gen_wave'], key='gen_wave', enable_events=True)],
-                    [sg.T('Generate Wave Keys', tooltip='Key schedule for the wave generation. (Separate by , !)'), sg.InputText(default_settings['gen_keys'], key='gen_keys'), sg.Button('Preview Keys')],
+                    [sg.T('Generate Wave Keys', tooltip='Key schedule for the wave generation. (Separate by , !)'), sg.InputText(default_settings['gen_keys'], key='gen_keys'), sg.Button('', key='Preview Keys', image_data=get_themed_icon(TOP_PLAY), button_color=sg.theme_background_color(), border_width=0)],
                     [sg.T('Generate Wave Amplitude', tooltip='Amp for the generated wave.'), sg.InputText(default_settings['gen_amp'], key='gen_amp', size=(15,0))],
-                    [sg.T('Interp Audio Target Path', tooltip='Path to the audio target (used for interpolations).'), sg.Button('❌', key='clear_audio_target', button_color=sg.theme_background_color(), border_width=0), sg.InputText(default_settings['audio_target'], key='audio_target'), sg.FileBrowse(file_types=(("Audio Files", ".wav .flac"),)), sg.Button('Drop', key='drop_target')],
+                    [sg.T('Interp Audio Target Path', tooltip='Path to the audio target (used for interpolations).'), sg.Button('❌', key='clear_audio_target', button_color=sg.theme_background_color(), border_width=0), sg.InputText(default_settings['audio_target'], key='audio_target'), CustomFileBrowse(file_types=(("Audio Files", ".wav .flac"),)), sg.Button('', image_data=get_themed_icon(DROP_ICON), key='drop_target', button_color=sg.theme_background_color(), border_width=0)],
                     [sg.T('Interp Steps', tooltip='The number of interpolations.'), sg.InputText(default_settings['interpolations_linear'], key='interpolations_linear', size=(5,0))],
                     [sg.Checkbox('Use Autocast', default=default_settings['use_autocast'], key='use_autocast', tooltip='Autocasting automatically chooses the precision for GPU operations to improve performance while maintaining accuracy.'), sg.T('Crop Offset', tooltip='The starting sample offset to crop input audio to. Use -1 for random cropping.'), sg.InputText(default_settings['crop_offset'], key='crop_offset', size=(15,0))],
                     [sg.Checkbox('Tame', default=default_settings['tame'], key='tame', tooltip='Decrease output by 3db, then clip.'), sg.Checkbox('Keep Start', default=default_settings['keep_start'], key='keep_start', tooltip='Keep beginning of audio provided(only applies to mode Extension).')],
@@ -79,7 +74,7 @@ loading_gif_img = sg.Image(background_color=sg.theme_background_color(), key='-L
 
 buttons = [sg.Button('Generate'), loading_gif_img]
 
-prog_bar = sg.ProgressBar(100, size=(0, 30), expand_x=True, key='progbar')
+prog_bar = sg.ProgressBar(100, size=(0, 30), expand_x=True, key='prog_bar')
 
 bottom_column = sg.Column([buttons, [prog_bar]], expand_x=True, expand_y=False)
 
@@ -109,20 +104,6 @@ curprog = 100
 while True:
     event, values = window.read(timeout=10)
     loading_gif_img.update_animation(LOADING_GIF_B64, time_between_frames=50)
-    if redirect:
-        try:
-            bufferval = buffer.getvalue()
-            with open('log.txt', 'w') as log:
-                if bufferval:
-                    log.write(bufferval)
-                percentage = bufferval.strip().split('\r')[-1].split('%')[0]
-                if buffer.getvalue() and percentage != '':            
-                    if int(percentage) != curprog:
-                        prog_bar.update_bar(int(percentage), 100)
-                        curprog = int(percentage)
-    
-        except:
-            pass
 
 
 

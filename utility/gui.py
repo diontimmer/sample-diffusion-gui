@@ -21,6 +21,8 @@ from importlib import import_module
 import PySide2.QtCore as QtCore
 import yaml
 from utility.constants import *
+from utility.helpers import recolor_image_b64
+
 
 sys.path.append('sample_diffusion') 
 
@@ -29,6 +31,9 @@ from sample_diffusion.util.platform import get_torch_device_type
 from sample_diffusion.dance_diffusion.api import RequestHandler, Request, Response, RequestType, SamplerType, SchedulerType, ModelType
 
 # block pygame welcome message
+
+prog = None
+current_total_steps = 0
 
 sys.stdout = open(os.devnull, "w")
 from pygame import mixer  # noqa: E402
@@ -43,6 +48,11 @@ current_sound_channel = mixer.Channel(2)
 
 treedata = sg.TreeData()
 
+def get_themed_icon(b64):
+    theme_button_text, theme_button_bg = sg.theme_button_color()
+    #return recolor_image_b64(b64, theme_button_text)
+    return b64
+    
 def load_theme(qt=False):
     interface = sg if qt == False else sgqt
     with open('config/guiconfig.yaml', 'r') as f:
@@ -351,6 +361,12 @@ def out_file_exists(output_folder, modelname, id_str, ix):
             return True
     return False
 
+def sampler_callback(**args):
+    global current_total_steps
+    global prog
+    step = args["step"] + 1
+    prog.update(current_count=step, max=current_total_steps)
+
 def get_args_object():
     args_object = SimpleNamespace()
     args_object.model = 'models/dd/model.ckpt'
@@ -378,7 +394,9 @@ def get_args_object():
     args_object.resamples = 5
     args_object.gen_amp = 100
     args_object.schedule = 'CrashSchedule'
-    args_object.sampler_args = {'use_tqdm': True}
+    args_object.sampler_args = {
+        'use_tqdm': True,
+        }
     args_object.schedule_args = {}
     args_object.mask = ''
     args_object.device_accelerator = 'cuda'
@@ -490,6 +508,9 @@ def open_in_finder(path):
         print(f"Unsupported platform: {sys.platform}")
 
 def generate(window, values):
+    global prog
+    global current_total_steps
+    prog = window['prog_bar']
     window['Generate'].update(disabled=True)
     window['-LOADINGGIF-'].update(visible=True)
     args = get_args_from_window(values)
@@ -502,6 +523,7 @@ def generate(window, values):
     if args.audio_source != '':
         args.audio_source = args.audio_source if os.path.exists(args.audio_source) else ''
     args.sampler_args = {'use_tqdm': True, 'eta': args.ddim_eta}
+    current_total_steps = args.steps - 1
 
     # check paths
     if args.mode in ('Variation', 'Interpolation'):
@@ -558,6 +580,7 @@ def generate(window, values):
         torch.cuda.empty_cache()
         seed = args.seed if(args.seed!=-1) else torch.randint(0, 4294967294, [1], device=device_type_accelerator).item()
         id_str = seed
+
         print(f'Processing loop {i+1}/{values["batch_loop"]}, Using accelerator: {device_type_accelerator}, Seed: {seed}.')
         for source in varlist:
             if args.mode == 'Variation':
@@ -594,7 +617,7 @@ def generate(window, values):
                 scheduler_args=args.schedule_args
             )
             
-            response = request_handler.process_request(request)#, lambda **kwargs: print(f"{kwargs['step'] / kwargs['x']}"))
+            response = request_handler.process_request(request, callback=sampler_callback)
             results = save_audio(
                 (0.5 * response.result).clamp(-1,1) if(args.tame == True) else response.result, 
                 output_folder=output_folder, 
