@@ -12,13 +12,6 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     fi
 fi
 
-# Read variables from webui-user.sh
-# shellcheck source=/dev/null
-if [[ -f webui-user.sh ]]
-then
-    source ./webui-user.sh
-fi
-
 # Set defaults
 
 # python3 executable
