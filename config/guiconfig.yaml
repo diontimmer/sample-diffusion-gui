@@ -33,3 +33,4 @@ PROGRESS_DEPTH: 0
 
 
 stay_on_top: False # Keep window on top?
+model_folder: 'models' # Folder to store models

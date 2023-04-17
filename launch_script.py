@@ -71,7 +71,7 @@ def run_pip(args, desc=None):
 
 SKIP_INSTALL = False
 
-torch_command = "pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu117" if platform == 'win32' else 'pip install torch torchaudio'
+torch_command = "pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu118" if platform == 'win32' else 'pip install torch torchaudio'
 
 main_script_path = "main_gui.py"
 pre_torch_packages = []
@@ -95,12 +95,16 @@ post_torch_packages = [
                         "librosa",
                         "tqdm",
                         "k-diffusion",
-                        "pyyaml"
+                        "pyyaml",
+                        "audio_diffusion_pytorch==0.0.96",
+                        "v-diffusion-pytorch"
                         ]
 
 aliases = {
     "k-diffusion": 'k_diffusion',
     "pyyaml": 'yaml',
+    "audio_diffusion_pytorch==0.0.96": 'audio_diffusion_pytorch',
+    "v-diffusion-pytorch": 'diffusion',
 }
 
 
