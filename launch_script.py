@@ -71,7 +71,7 @@ def run_pip(args, desc=None):
 
 SKIP_INSTALL = False
 
-torch_command = "pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu117" if platform == 'win32' else 'pip install torch torchaudio'
+torch_command = "pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu118" if platform == 'win32' else 'pip install torch torchaudio'
 
 main_script_path = "main_gui.py"
 pre_torch_packages = []
