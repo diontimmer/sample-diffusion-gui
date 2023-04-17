@@ -95,12 +95,16 @@ post_torch_packages = [
                         "librosa",
                         "tqdm",
                         "k-diffusion",
-                        "pyyaml"
+                        "pyyaml",
+                        "audio_diffusion_pytorch==0.0.96",
+                        "v-diffusion-pytorch"
                         ]
 
 aliases = {
     "k-diffusion": 'k_diffusion',
     "pyyaml": 'yaml',
+    "audio_diffusion_pytorch==0.0.96": 'audio_diffusion_pytorch',
+    "v-diffusion-pytorch": 'diffusion',
 }
 
 

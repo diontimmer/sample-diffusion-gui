@@ -26,10 +26,11 @@ from utility.helpers import recolor_image_b64
 
 sys.path.append('sample_diffusion') 
 
-from sample_diffusion.util.util import load_audio, crop_audio
+from sample_diffusion.util.util import load_audio, cropper
 from sample_diffusion.util.platform import get_torch_device_type
-from sample_diffusion.dance_diffusion.api import RequestHandler, Request, Response, RequestType, SamplerType, SchedulerType, ModelType
-
+from sample_diffusion.dance_diffusion.api import RequestHandler, Request, Response, RequestType, ModelType
+from diffusion_library.sampler import SamplerType
+from diffusion_library.scheduler import SchedulerType
 # block pygame welcome message
 
 prog = None
@@ -47,6 +48,19 @@ mixer.init()
 current_sound_channel = mixer.Channel(2)
 
 treedata = sg.TreeData()
+
+def hijack_tqdm(callback, auto=True):
+    if auto:
+        from tqdm.auto import tqdm
+    else:
+        from tqdm import tqdm
+    orig_func = getattr(tqdm, "update")
+    def wrapped_func(*args, **kwargs):
+        pbar = args[0]
+        v = orig_func(*args, **kwargs)
+        callback({"value": pbar.n, "max": pbar.total})            
+        return v
+    setattr(tqdm, "update", wrapped_func)
 
 def get_themed_icon(b64):
     theme_button_text, theme_button_bg = sg.theme_button_color()
@@ -349,7 +363,8 @@ def show_save_window(window, values):
     popup_window.close()
 
 def get_models():
-    models = glob.glob('models/*.ckpt')
+    modelfolder = get_config_value('model_folder')
+    models = glob.glob(f'{modelfolder}/*.ckpt')
     models = [os.path.basename(model) for model in models]
     if models == []:
         models = ['No models found, please load ckpt with tool.']
@@ -361,15 +376,9 @@ def out_file_exists(output_folder, modelname, id_str, ix):
             return True
     return False
 
-def sampler_callback(**args):
-    global current_total_steps
-    global prog
-    step = args["step"] + 1
-    prog.update(current_count=step, max=current_total_steps)
-
 def get_args_object():
     args_object = SimpleNamespace()
-    args_object.model = 'models/dd/model.ckpt'
+    args_object.model = f'{get_config_value("model_folder")}/dd/model.ckpt'
     args_object.sample_rate = 48000
     args_object.chunk_size = 65536
     args_object.mode = 'Generation'
@@ -380,12 +389,12 @@ def get_args_object():
     args_object.noise_level = 0.7
     args_object.interpolations_linear = 3
     args_object.steps = 50
-    args_object.sampler = 'IPLMS'
+    args_object.sampler = 'V_IPLMS'
     args_object.output_path = None
     args_object.model_name = None
     args_object.tame = True
     args_object.custom_batch_name = None
-    args_object.crop_offset = 0
+    args_object.use_autocrop = True
     args_object.use_autocast = True
     args_object.gen_wave = 'None'
     args_object.gen_keys = 'C4, C5, C6'
@@ -393,10 +402,8 @@ def get_args_object():
     args_object.seed = -1
     args_object.resamples = 5
     args_object.gen_amp = 100
-    args_object.schedule = 'CrashSchedule'
-    args_object.sampler_args = {
-        'use_tqdm': True,
-        }
+    args_object.schedule = 'V_CRASH'
+    args_object.sampler_args = {}
     args_object.schedule_args = {}
     args_object.mask = ''
     args_object.device_accelerator = 'cuda'
@@ -480,6 +487,16 @@ def get_args_from_window(values):
                     setattr(args, key, float(getattr(args, key)))
                 except ValueError:
                     pass
+
+    args.sampler_args = {'use_tqdm': True, 'eta': args.ddim_eta}
+    args.schedule_args = {
+        'sigma_min': values['sigma_min'],
+        'sigma_max': values['sigma_max'],
+        'rho': values['rho'],
+    }
+
+
+
     return args
 
 def preview_keys(window, values):
@@ -514,15 +531,13 @@ def generate(window, values):
     window['Generate'].update(disabled=True)
     window['-LOADINGGIF-'].update(visible=True)
     args = get_args_from_window(values)
-
-    args.model = 'models/' + args.model
     model_filename = os.path.basename(args.model).split('.')[0]
     args.model_name = ''.join(model_filename.split('_')[:-2])
+    args.model = os.path.join(get_config_value('model_folder'), args.model)
     args.chunk_size = int(eval(str(args.chunk_size)))
     args.audio_source = '' if args.audio_source == None else args.audio_source
     if args.audio_source != '':
         args.audio_source = args.audio_source if os.path.exists(args.audio_source) else ''
-    args.sampler_args = {'use_tqdm': True, 'eta': args.ddim_eta}
     current_total_steps = args.steps - 1
 
     # check paths
@@ -537,14 +552,11 @@ def generate(window, values):
         window['-LOADINGGIF-'].update(visible=False)
         return
 
-    args.crop_offset = int(args.crop_offset)
     device_type_accelerator = args.device_accelerator if(args.device_accelerator != None) else get_torch_device_type()
     device_accelerator = torch.device(device_type_accelerator)
     device_offload = torch.device(args.device_offload)
 
-    crop = lambda audio: crop_audio(audio, args.chunk_size, args.crop_offset) if args.crop_offset is not None else audio
-    load_input = lambda source: crop(load_audio(device_accelerator, source, args.sample_rate)) if source is not None else None
-
+    autocrop = cropper(args.chunk_size, True) if(args.use_autocrop == True) else lambda audio: audio
 
     request_handler = RequestHandler(device_accelerator, device_offload, optimize_memory_use=False, use_autocast=args.use_autocast)
     request_type = RequestType[args.mode]
@@ -558,8 +570,8 @@ def generate(window, values):
 
     if values['secondary_model'] != 'None':
         print('Merging models..')
-        ratio_merge(f'models/{values["model"]}', f'models/{values["secondary_model"]}', alpha=float(values['merge_ratio']), out_file='models/sec_mrg_buffer.ckpt')
-        args.model = 'models/sec_mrg_buffer.ckpt'
+        ratio_merge(f'{get_config_value("model_folder")}/{values["model"]}', f'{get_config_value("model_folder")}/{values["secondary_model"]}', alpha=float(values['merge_ratio']), out_file=f'{get_config_value("model_folder")}/sec_mrg_buffer.ckpt')
+        args.model = f'{get_config_value("model_folder")}/sec_mrg_buffer.ckpt'
     
 
     varlist = [args.audio_source]
@@ -594,13 +606,23 @@ def generate(window, values):
                 model_path=args.model,
                 model_type=model_type,
                 model_chunk_size=args.chunk_size,
-                model_sample_rate=args.sample_rate,
-                
+                model_sample_rate=args.sample_rate,  
                 seed=seed,
                 batch_size=args.batch_size,
-                
-                audio_source=load_input(source),
-                audio_target=load_input(args.audio_target),
+                audio_source=autocrop(
+                    load_audio(
+                        device_accelerator,
+                        args.audio_source,
+                        args.sample_rate
+                    )
+                )if(source != None) else None, # FIX FOR INTERPOLATIONS
+                audio_target=autocrop(
+                    load_audio(
+                        device_accelerator,
+                        args.audio_target,
+                        args.sample_rate
+                    )
+                )if(args.audio_target != None) else None,
                 mask=torch.load(args.mask) if(args.mask != None) else None,
                 
                 noise_level=args.noise_level,
@@ -617,7 +639,7 @@ def generate(window, values):
                 scheduler_args=args.schedule_args
             )
             
-            response = request_handler.process_request(request, callback=sampler_callback)
+            response = request_handler.process_request(request)
             results = save_audio(
                 (0.5 * response.result).clamp(-1,1) if(args.tame == True) else response.result, 
                 output_folder=output_folder, 
@@ -629,8 +651,8 @@ def generate(window, values):
         
 
     print('Process Finished!')
-    if os.path.exists('models/sec_mrg_buffer.ckpt'):
-        os.remove('models/sec_mrg_buffer.ckpt')
+    if os.path.exists(f'{get_config_value("model_folder")}/sec_mrg_buffer.ckpt'):
+        os.remove(f'{get_config_value("model_folder")}/sec_mrg_buffer.ckpt')
     if args.gen_wave != 'None':
         os.remove(varlist[0])
     window['Generate'].update(disabled=False)

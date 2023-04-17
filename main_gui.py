@@ -5,13 +5,13 @@ from utility.gui import get_themed_icon
 
 version = '0.8.1'
 
-
 splash = sg.Window('Window Title', [[sg.Image(filename='utility/data/splash.png')]], transparent_color=sg.theme_background_color(), no_titlebar=True, keep_on_top=True)
 splash.read(timeout=0)
 
 from utility.gui import *
 from utility.constants import *
-from sample_diffusion.dance_diffusion.api import RequestType, SamplerType, SchedulerType 
+from diffusion_library.sampler import SamplerType
+from diffusion_library.scheduler import SchedulerType
 
 sg.theme(load_theme())   # Add a touch of color
 sg.set_options(font='Helvetica 10')
@@ -19,6 +19,7 @@ sg.set_options(suppress_raise_key_errors=False, suppress_error_popups=True, supp
 
 from utility.elements import CustomFolderBrowse, CustomFileBrowse
 
+modes = [x for x in RequestType._member_names_ if x != 'Inpainting']
 
 tree_layout = [
                 [sg.Button('', key='Play', font='Helvetica 20', image_data=TOP_PLAY, button_color=sg.theme_background_color(), border_width=0), sg.Button('', key='Save', font='Helvetica 20', image_data=TOP_SAVE, button_color=sg.theme_background_color(), border_width=0), sg.Button('', key='Locate', font='Helvetica 20', image_data=TOP_FOLDER, button_color=sg.theme_background_color(), border_width=0), sg.Button('Load As Input'), sg.T('Preview Volume: '), sg.Slider(range=(0, 100), orientation='h', size=(50, 20), enable_events=True, key="-VOLUME-", default_value=100, disable_number_display=True)],
@@ -27,7 +28,7 @@ tree_layout = [
 
 settings_main = sg.Column([
                     [sg.T('Model File', tooltip='Path to the model checkpoint file to be used.'), sg.Combo([], key='model', default_value='', enable_events=True, size=(30,0))],
-                    [sg.T('Mode', tooltip='The mode of operation'), sg.Combo(RequestType._member_names_, default_value=default_settings['mode'], key='mode')],
+                    [sg.T('Mode', tooltip='The mode of operation'), sg.Combo(modes, default_value=default_settings['mode'], key='mode')],
                     [sg.T('Output Path', tooltip='Path for output renders.'), sg.InputText('output', key='output_path'), CustomFolderBrowse()],
                     [sg.T('Batch Loop', tooltip='The number of times the internal batch size will loop.'), sg.InputText('1', key='batch_loop', size=(8,0), enable_events=True)],
                     [sg.T('Internal Batch Size', tooltip='The maximal number of samples to be produced per batch.'), sg.InputText(default_settings['batch_size'], key='batch_size', size=(15,0), enable_events=True), sg.T('Total output files: 1', tooltip='Batch Loop * Internal Batch Size', key='batch_viewer', text_color='yellow')],
@@ -47,7 +48,7 @@ settings_add = sg.Column([
                     [sg.T('Generate Wave Amplitude', tooltip='Amp for the generated wave.'), sg.InputText(default_settings['gen_amp'], key='gen_amp', size=(15,0))],
                     [sg.T('Interp Audio Target Path', tooltip='Path to the audio target (used for interpolations).'), sg.Button('❌', key='clear_audio_target', button_color=sg.theme_background_color(), border_width=0), sg.InputText(default_settings['audio_target'], key='audio_target'), CustomFileBrowse(file_types=(("Audio Files", ".wav .flac"),)), sg.Button('', image_data=get_themed_icon(DROP_ICON), key='drop_target', button_color=sg.theme_background_color(), border_width=0)],
                     [sg.T('Interp Steps', tooltip='The number of interpolations.'), sg.InputText(default_settings['interpolations_linear'], key='interpolations_linear', size=(5,0))],
-                    [sg.Checkbox('Use Autocast', default=default_settings['use_autocast'], key='use_autocast', tooltip='Autocasting automatically chooses the precision for GPU operations to improve performance while maintaining accuracy.'), sg.T('Crop Offset', tooltip='The starting sample offset to crop input audio to. Use -1 for random cropping.'), sg.InputText(default_settings['crop_offset'], key='crop_offset', size=(15,0))],
+                    [sg.Checkbox('Use Autocast', default=default_settings['use_autocast'], key='use_autocast', tooltip='Autocasting automatically chooses the precision for GPU operations to improve performance while maintaining accuracy.'), sg.Checkbox('Use Autocrop', tooltip='Automatically crop input audio?', key='use_autocrop', default=default_settings['use_autocrop'])],
                     [sg.Checkbox('Tame', default=default_settings['tame'], key='tame', tooltip='Decrease output by 3db, then clip.'), sg.Checkbox('Keep Start', default=default_settings['keep_start'], key='keep_start', tooltip='Keep beginning of audio provided(only applies to mode Extension).')],
                     [sg.T('Noise Level', tooltip='The noise level (used for variations & interpolations).'), sg.InputText(default_settings['noise_level'], key='noise_level', size=(15,0))],
                     ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
@@ -57,13 +58,13 @@ settings_add = sg.Column([
 settings_sampler = sg.Column([
                     [sg.T('Steps', tooltip='The number of steps for the sampler.'), sg.InputText(default_settings['steps'], key='steps', size=(15,0))],
                     [sg.T('Sampler', tooltip='The sampler used for the diffusion model.'), sg.Combo(SamplerType._member_names_, default_value=default_settings['sampler'], key='sampler')],
-                    [sg.T('Schedule', tooltip='The schedule used for the sampler.'), sg.Combo(SchedulerType._member_names_, default_value='CrashSchedule', key='schedule')],
+                    [sg.T('Schedule', tooltip='The schedule used for the sampler.'), sg.Combo(SchedulerType._member_names_, default_value=default_settings['schedule'], key='schedule')],
                     [sg.T('DDIM-ETA'), sg.InputText('0', key='ddim_eta', size=(5,0))],
                     [sg.T('Resamples'), sg.InputText(default_settings['resamples'], key='resamples', size=(5,0), tooltip='Number of resampling steps in conventional samplers for inpainting.')],
                     #[sg.Checkbox('K-Alt Sigma Function', default=False, key='alt_sigma', enable_events=True)],
-                    #[sg.T('K-Sigma Min', key='smintext'), sg.InputText('0.0001', key='sigma_min', size=(7,0), disabled_readonly_background_color='DarkGrey')],
-                    #[sg.T('K-Sigma Max', key='smaxtext'), sg.InputText('80', key='sigma_max', size=(7,0), disabled_readonly_background_color='DarkGrey')],
-                    #[sg.T('K-RHO'), sg.InputText('7', key='rho', size=(5,0))],
+                    [sg.T('K-Sigma Min', key='smintext'), sg.InputText('0.01', key='sigma_min', size=(7,0), disabled_readonly_background_color='DarkGrey')],
+                    [sg.T('K-Sigma Max', key='smaxtext'), sg.InputText('50', key='sigma_max', size=(7,0), disabled_readonly_background_color='DarkGrey')],
+                    [sg.T('K-RHO'), sg.InputText('7', key='rho', size=(5,0))],
                     #[sg.T('K-adaptive-RTOL'), sg.InputText('0.01', key='rtol', size=(5,0))],
                     #[sg.T('K-adaptive-ATOL'), sg.InputText('0.01', key='atol', size=(5,0))],
                     ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
@@ -91,6 +92,11 @@ splash.close()
 window['file_tree'].bind('<Double-Button-1>', '_double_clicked')
 window['-LOADINGGIF-'].update(visible=False)
 
+def prog_callback(*args):
+    args = args[0]
+    prog_bar.update(current_count=args['value'], max=args['max'])
+
+hijack_tqdm(prog_callback)
 
 # init
 exts = load_extensions(window)
