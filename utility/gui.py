@@ -33,8 +33,7 @@ from diffusion_library.sampler import SamplerType
 from diffusion_library.scheduler import SchedulerType
 # block pygame welcome message
 
-prog = None
-current_total_steps = 0
+request_handler = None
 
 sys.stdout = open(os.devnull, "w")
 from pygame import mixer  # noqa: E402
@@ -282,20 +281,6 @@ def show_save_window(window, values):
     # WARNINGS
     disable_confirm = False
     warnings = [[]]
-    #if values['mode'] in ('Variation', 'Interpolation') and values['alt_sigma']:
-    #    warnings.append(create_warning('WARNING: Using alternative sigma func for variation/interp mode will not work!'))
-
-    if values['mode'] == 'Interpolation' and values['sampler'] == 'DDIM':
-        warnings.append(create_warning('ERROR: Interpolations currently do not work with the ddim sampler!'))
-        disable_confirm = True
-
-    if values['mode'] == 'Inpainting':
-        warnings.append(create_warning('ERROR: Inpainting is not yet properly implemented!'))
-        disable_confirm = True
-
-    if values['mode'] in ('Extension', 'Inpainting') and values['sampler'] != 'DDPM':
-        warnings.append(create_warning('ERROR: Extension/Inpainting only currently works with the DDPM sampler!'))
-        disable_confirm = True
 
     if values['sample_rate'] not in ['44100', '48000', '16000', '22050', '24000', '32000', '8000']:
         warnings.append(create_warning(f'WARNING: Unusual sample rate detected: {values["sample_rate"]}!'))
@@ -525,12 +510,27 @@ def open_in_finder(path):
         print(f"Unsupported platform: {sys.platform}")
 
 def generate(window, values):
-    global prog
-    global current_total_steps
-    prog = window['prog_bar']
+    # Reuse request_handler if possible
+    global request_handler
+
+    # get args
+    args = get_args_from_window(values)
+
+
+    # get device
+    device_type_accelerator = args.device_accelerator if(args.device_accelerator != None) else get_torch_device_type()
+    device_accelerator = torch.device(device_type_accelerator)
+    device_offload = torch.device(args.device_offload)
+
+    # make new request handler
+    if request_handler is None:
+        request_handler = RequestHandler(device_accelerator, device_offload, optimize_memory_use=False, use_autocast=args.use_autocast)
+
+    # Disable Button and start loading
     window['Generate'].update(disabled=True)
     window['-LOADINGGIF-'].update(visible=True)
-    args = get_args_from_window(values)
+
+    # get args
     model_filename = os.path.basename(args.model).split('.')[0]
     args.model_name = ''.join(model_filename.split('_')[:-2])
     args.model = os.path.join(get_config_value('model_folder'), args.model)
@@ -538,7 +538,8 @@ def generate(window, values):
     args.audio_source = '' if args.audio_source == None else args.audio_source
     if args.audio_source != '':
         args.audio_source = args.audio_source if os.path.exists(args.audio_source) else ''
-    current_total_steps = args.steps - 1
+
+    # Check Errors
 
     # check paths
     if args.mode in ('Variation', 'Interpolation'):
@@ -552,13 +553,12 @@ def generate(window, values):
         window['-LOADINGGIF-'].update(visible=False)
         return
 
-    device_type_accelerator = args.device_accelerator if(args.device_accelerator != None) else get_torch_device_type()
-    device_accelerator = torch.device(device_type_accelerator)
-    device_offload = torch.device(args.device_offload)
+
 
     autocrop = cropper(args.chunk_size, True) if(args.use_autocrop == True) else lambda audio: audio
 
-    request_handler = RequestHandler(device_accelerator, device_offload, optimize_memory_use=False, use_autocast=args.use_autocast)
+    # Casting
+
     request_type = RequestType[args.mode]
     model_type = ModelType.DD
     sampler_type = SamplerType[args.sampler]
