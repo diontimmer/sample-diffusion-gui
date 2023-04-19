@@ -20,21 +20,16 @@ options_col = sg.Column([
 ], scrollable=True, vertical_scroll_only=True, size=(600, 200), expand_x=True, expand_y=True)
 
 
-def importmodel_cmd(v):
+def importmodel_cmd(v, out_name):
     global window
     if not os.path.exists('models'):
         os.mkdir('models')
-    model_name = v['ext_model_importer_MODEL_NAME'] if v['ext_model_importer_MODEL_NAME'] != '' else os.path.basename(v['ext_model_importer_MODEL_PATH']).split('.')[0]
-    model_path = v['ext_model_importer_MODEL_PATH']
-    sample_rate = v['ext_model_importer_SAMPLE_RATE']
-    model_size = v['ext_model_importer_MODEL_SIZE']
-    out_name = f'models/{model_name}_{sample_rate}_{model_size}.ckpt'
     window['ext_model_importer_IMPORT'].update(disabled=True)
     window['ext_model_importer_TRIMONLY'].update(disabled=True)
     if v['ext_model_importer_TRIM']:
         #prune_latent_uncond(model_path, out_name, sample_rate, model_size)
         #if not v['ext_model_importer_LATENT']:
-        window.start_thread(lambda: start_trim(model_path, out_name), 'ext_model_importer_FINISH_IMPORT')
+        window.start_thread(lambda: start_trim(v['ext_model_importer_MODEL_PATH'], out_name), 'ext_model_importer_FINISH_IMPORT')
         #else:
         #    prune_latent_uncond(model_path, out_name, sample_rate, model_size)
 
@@ -73,8 +68,11 @@ def on_activate(loaded_window):
 # Called from the main window loop, use this to catch values and do stuff.
 def handle_event_values(event, values):
     global window
+    global out_name
     if event == 'ext_model_importer_IMPORT':
-        importmodel_cmd(values)
+        model_name = values['ext_model_importer_MODEL_NAME'] if values['ext_model_importer_MODEL_NAME'] != '' else os.path.basename(values['ext_model_importer_MODEL_PATH']).split('.')[0]
+        out_name = f'models/{model_name}_{values["ext_model_importer_SAMPLE_RATE"]}_{values["ext_model_importer_MODEL_SIZE"]}.ckpt'
+        importmodel_cmd(values, out_name)
     if event == 'ext_model_importer_TRIMONLY':
         original_dir = os.path.dirname(values['ext_model_importer_MODEL_PATH'])
         out_name = f'{original_dir}/{values["ext_model_importer_MODEL_NAME"]}_trimmed.ckpt'
@@ -84,4 +82,7 @@ def handle_event_values(event, values):
     if event in ('ext_model_importer_FINISH_IMPORT', 'ext_model_importer_FINISH_TRIM'):
         window['ext_model_importer_IMPORT'].update(disabled=False)
         window['ext_model_importer_TRIMONLY'].update(disabled=False)
-        refresh_models(window)
+        
+
+    if event == 'ext_model_importer_FINISH_IMPORT':
+       refresh_models(window, out_name) 

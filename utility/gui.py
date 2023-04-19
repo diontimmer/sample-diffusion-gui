@@ -227,17 +227,16 @@ def save_settings(values):
         pickle.dump(values, f)
 
 
-def refresh_models(window):
+def refresh_models(window, set_model=None):
     models = get_models()
-    if models:
-        if window['model'].get():
-            current_model = window['model'].get()
-        else:
-            current_model = models[0]
-        window['model'].update(values=models, value=current_model)
-        models.append('None')
-        window['secondary_model'].update(values=models, value=window['secondary_model'].get())
+    if set_model is None:
+        current_model = window['model'].get()
+    else:
+        current_model = os.path.basename(set_model)
 
+    window['model'].update(values=models, value=current_model)
+    window['secondary_model'].update(values=models, value=window['secondary_model'].get())
+    
 
 def apply_model_params(window, model_path):
     try:
@@ -351,8 +350,7 @@ def get_models():
     modelfolder = get_config_value('model_folder')
     models = glob.glob(f'{modelfolder}/*.ckpt')
     models = [os.path.basename(model) for model in models]
-    if models == []:
-        models = ['No models found, please load ckpt with tool.']
+    models.append('None')
     return models
 
 def out_file_exists(output_folder, modelname, id_str, ix):
