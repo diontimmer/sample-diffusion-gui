@@ -4,7 +4,7 @@ script_folder = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(script_folder)
 import PySimpleGUI as sg
 from trim_model import start_trim
-from utility.gui import refresh_models
+from utility.gui import refresh_models, get_config_value
 
 # get script folder
 
@@ -22,8 +22,8 @@ options_col = sg.Column([
 
 def importmodel_cmd(v, out_name):
     global window
-    if not os.path.exists('models'):
-        os.mkdir('models')
+    if not os.path.exists(get_config_value('model_folder')):
+        os.mkdir(get_config_value('model_folder'))
     window['ext_model_importer_IMPORT'].update(disabled=True)
     window['ext_model_importer_TRIMONLY'].update(disabled=True)
     if v['ext_model_importer_TRIM']:
@@ -71,7 +71,7 @@ def handle_event_values(event, values):
     global out_name
     if event == 'ext_model_importer_IMPORT':
         model_name = values['ext_model_importer_MODEL_NAME'] if values['ext_model_importer_MODEL_NAME'] != '' else os.path.basename(values['ext_model_importer_MODEL_PATH']).split('.')[0]
-        out_name = f'models/{model_name}_{values["ext_model_importer_SAMPLE_RATE"]}_{values["ext_model_importer_MODEL_SIZE"]}.ckpt'
+        out_name = f'{get_config_value("model_folder(")}/{model_name}_{values["ext_model_importer_SAMPLE_RATE"]}_{values["ext_model_importer_MODEL_SIZE"]}.ckpt'
         importmodel_cmd(values, out_name)
     if event == 'ext_model_importer_TRIMONLY':
         original_dir = os.path.dirname(values['ext_model_importer_MODEL_PATH'])
