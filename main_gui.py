@@ -19,7 +19,8 @@ sg.set_options(suppress_raise_key_errors=False, suppress_error_popups=True, supp
 
 from utility.elements import CustomFolderBrowse, CustomFileBrowse
 
-modes = [x for x in RequestType._member_names_ if x != 'Inpainting']
+disabled_modes = ["Inpainting", "Extension"]
+modes = [x for x in RequestType._member_names_ if x in disabled_modes]
 
 tree_layout = [
                 [sg.Button('', key='Play', font='Helvetica 20', image_data=TOP_PLAY, button_color=sg.theme_background_color(), border_width=0), sg.Button('', key='Save', font='Helvetica 20', image_data=TOP_SAVE, button_color=sg.theme_background_color(), border_width=0), sg.Button('', key='Locate', font='Helvetica 20', image_data=TOP_FOLDER, button_color=sg.theme_background_color(), border_width=0), sg.Button('Load As Input'), sg.T('Preview Volume: '), sg.Slider(range=(0, 100), orientation='h', size=(50, 20), enable_events=True, key="-VOLUME-", default_value=100, disable_number_display=True)],
