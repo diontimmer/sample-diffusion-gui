@@ -21,8 +21,6 @@ from importlib import import_module
 import PySide2.QtCore as QtCore
 import yaml
 from utility.constants import *
-from utility.helpers import recolor_image_b64
-
 
 sys.path.append('sample_diffusion') 
 

@@ -1,23 +1,29 @@
 #!/usr/bin/env python3
 
-from prefigure.prefigure import get_all_args, push_wandb_config
+import math
+
 from contextlib import contextmanager
 from copy import deepcopy
-import math
 from pathlib import Path
+from prefigure.prefigure import get_all_args
+from prefigure.prefigure import push_wandb_config
 
+import os
+import pytorch_lightning as pl
+import shutil
 import sys
 import torch
-from torch import optim, nn
+import torchaudio
+import wandb
+import zipfile
+
+from einops import rearrange
+from pytorch_lightning.utilities.rank_zero import rank_zero_only
+from torch import nn
+from torch import optim
 from torch.nn import functional as F
 from torch.utils import data
 from tqdm import trange
-import pytorch_lightning as pl
-from pytorch_lightning.utilities.rank_zero import rank_zero_only
-from einops import rearrange
-import torchaudio
-import wandb
-import os
 sys.path.append(os.getcwd())
 from dataset.dataset import SampleDataset
 from library.audio_diffusion.models import DiffusionAttnUnet1D
@@ -193,9 +199,27 @@ def main():
 
     save_path = None if args.save_path == "" else args.save_path
 
+    if args.max_epochs != 10000000:
+        print('Loading pre-trained to check current epoch..')
+        current_epoch = torch.load(args.ckpt_path)['epoch']
+        args.max_epochs = current_epoch + int(args.max_epochs)
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Using device:', device)
     torch.manual_seed(args.seed)
+
+    if args.training_zip:
+        print('Unzipping dataset..')
+        if not os.path.exists('tmp/dataset'):
+            os.makedirs('tmp/dataset')
+        else:
+            shutil.rmtree('tmp/dataset')
+            os.makedirs('tmp/dataset')
+        with zipfile.ZipFile(args.training_zip, 'r') as zip_ref:
+            zip_ref.extractall('tmp/dataset')
+        args.training_dir = 'tmp/dataset'
+        print('Extract success!')
+
 
     train_set = SampleDataset([args.training_dir], args)
     train_dl = data.DataLoader(train_set, args.batch_size, shuffle=True,
@@ -221,7 +245,7 @@ def main():
         callbacks=[ckpt_callback, demo_callback, exc_callback],
         logger=wandb_logger,
         log_every_n_steps=1,
-        max_epochs=10000000,
+        max_epochs=args.max_epochs,
 
     ) if args.num_gpus > 1 else pl.Trainer(
         devices=1,
@@ -232,7 +256,7 @@ def main():
         callbacks=[ckpt_callback, demo_callback, exc_callback],
         logger=wandb_logger,
         log_every_n_steps=1,
-        max_epochs=10000000,
+        max_epochs=args.max_epochs,
     )
 
     diffusion_trainer.fit(diffusion_model, train_dl, ckpt_path=args.ckpt_path)

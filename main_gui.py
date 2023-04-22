@@ -105,6 +105,9 @@ refresh_models(window)
 set_total_output(window)
 set_total_seconds(window)
 prog_bar.update_bar(100, 100)
+if os.path.exists('./tmp'):
+    print('Removing tmp folder.')
+    shutil.rmtree('./tmp', ignore_errors=True)
 curprog = 100
 
 while True:
