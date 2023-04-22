@@ -1,7 +1,6 @@
 import PySimpleGUI as sg
 import subprocess
 import os
-import time
 
 trainproc = None
 
@@ -59,10 +58,10 @@ def run_training(values):
 def run_subp(args):
     global trainproc
     # Start the process using subprocess.Popen
-    trainproc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    trainproc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     try:
         while trainproc.poll() is None:
-            procoutput = trainproc.stdout.readline()
+            procoutput = trainproc.stdout.readline().decode()
             if procoutput:
                 print(procoutput.strip())
     except:
