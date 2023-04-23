@@ -5,7 +5,7 @@ This will create a venv and install the requirements.<br>
 This is mainly tested on Windows. OSX, Linux and WSL SHOULD work but there could be uncaught errors.<br>
 WSL/Linux users might need to ```sudo apt install nvidia-cudnn```
 
-### FFMPEG is required. <br>
+### GIT & FFMPEG is required. <br>
 Linux users can install ffmpeg by updating packages and running ```sudo apt install ffmpeg```<br>
 OSX users can install by using homebrew: ```brew install ffmpeg```<br>
 
