@@ -20,7 +20,7 @@ sg.set_options(suppress_raise_key_errors=False, suppress_error_popups=True, supp
 from utility.elements import CustomFolderBrowse, CustomFileBrowse
 
 disabled_modes = ["Inpainting", "Extension"]
-modes = [x for x in RequestType._member_names_ if x in disabled_modes]
+modes = [x for x in RequestType._member_names_ if x not in disabled_modes]
 
 tree_layout = [
                 [sg.Button('', key='Play', font='Helvetica 20', image_data=TOP_PLAY, button_color=sg.theme_background_color(), border_width=0), sg.Button('', key='Save', font='Helvetica 20', image_data=TOP_SAVE, button_color=sg.theme_background_color(), border_width=0), sg.Button('', key='Locate', font='Helvetica 20', image_data=TOP_FOLDER, button_color=sg.theme_background_color(), border_width=0), sg.Button('Load As Input'), sg.T('Preview Volume: '), sg.Slider(range=(0, 100), orientation='h', size=(50, 20), enable_events=True, key="-VOLUME-", default_value=100, disable_number_display=True)],
@@ -49,7 +49,7 @@ settings_add = sg.Column([
                     [sg.T('Generate Wave Amplitude', tooltip='Amp for the generated wave.'), sg.InputText(default_settings['gen_amp'], key='gen_amp', size=(15,0))],
                     [sg.T('Interp Audio Target Path', tooltip='Path to the audio target (used for interpolations).'), sg.Button('❌', key='clear_audio_target', button_color=sg.theme_background_color(), border_width=0), sg.InputText(default_settings['audio_target'], key='audio_target'), CustomFileBrowse(file_types=(("Audio Files", ".wav .flac"),)), sg.Button('', image_data=get_themed_icon(DROP_ICON), key='drop_target', button_color=sg.theme_background_color(), border_width=0)],
                     [sg.T('Interp Steps', tooltip='The number of interpolations.'), sg.InputText(default_settings['interpolations_linear'], key='interpolations_linear', size=(5,0))],
-                    [sg.Checkbox('Use Autocast', default=default_settings['use_autocast'], key='use_autocast', tooltip='Autocasting automatically chooses the precision for GPU operations to improve performance while maintaining accuracy.'), sg.Checkbox('Use Autocrop', tooltip='Automatically crop input audio?', key='use_autocrop', default=default_settings['use_autocrop'])],
+                    [sg.Checkbox('Use Autocast', default=default_settings['use_autocast'], key='use_autocast', tooltip='Autocasting automatically chooses the precision for GPU operations to improve performance while maintaining accuracy.'), sg.T('Crop Offset'), sg.Input(tooltip='The starting sample offset to crop input audio to. Use -1 for random cropping.', key='crop_offset', default_text=default_settings['crop_offset'])],
                     [sg.Checkbox('Tame', default=default_settings['tame'], key='tame', tooltip='Decrease output by 3db, then clip.'), sg.Checkbox('Keep Start', default=default_settings['keep_start'], key='keep_start', tooltip='Keep beginning of audio provided(only applies to mode Extension).')],
                     [sg.T('Noise Level', tooltip='The noise level (used for variations & interpolations).'), sg.InputText(default_settings['noise_level'], key='noise_level', size=(15,0))],
                     ], scrollable=True, vertical_scroll_only=True, expand_x=True, expand_y=True)
