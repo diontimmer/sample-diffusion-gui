@@ -71,7 +71,7 @@ def handle_event_values(event, values):
     global out_name
     if event == 'ext_model_importer_IMPORT':
         model_name = values['ext_model_importer_MODEL_NAME'] if values['ext_model_importer_MODEL_NAME'] != '' else os.path.basename(values['ext_model_importer_MODEL_PATH']).split('.')[0]
-        out_name = f'{get_config_value("model_folder(")}/{model_name}_{values["ext_model_importer_SAMPLE_RATE"]}_{values["ext_model_importer_MODEL_SIZE"]}.ckpt'
+        out_name = f'{get_config_value("model_folder")}/{model_name}_{values["ext_model_importer_SAMPLE_RATE"]}_{values["ext_model_importer_MODEL_SIZE"]}.ckpt'
         importmodel_cmd(values, out_name)
     if event == 'ext_model_importer_TRIMONLY':
         original_dir = os.path.dirname(values['ext_model_importer_MODEL_PATH'])
