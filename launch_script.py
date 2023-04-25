@@ -96,6 +96,7 @@ post_torch_packages = [
                         "tqdm",
                         "k-diffusion",
                         "pyyaml",
+                        "wandb",
                         "audio_diffusion_pytorch==0.0.96",
                         "v-diffusion-pytorch"
                         ]

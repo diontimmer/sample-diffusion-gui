@@ -1,6 +1,7 @@
 import PySimpleGUI as sg
 import subprocess
 import os
+import wandb
 
 trainproc = None
 
@@ -52,6 +53,7 @@ def run_training(values):
             "--save-path", f"{values['ext_trainer_OUTPUT_DIR']}/{values['ext_trainer_NAME']}",
             ]
 
+    wandb.login(key=values['ext_trainer_wandb_key'])
     window.start_thread(lambda: run_subp(args), 'ext_trainer_TRAINING_DONE')
     window['ext_trainer_TRAIN'].update(disabled=True)
 
