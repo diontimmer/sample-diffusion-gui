@@ -208,7 +208,7 @@ def load_settings(window):
 def load_extensions(window):
     exts = []
     for folder in os.listdir('extensions'):
-        for file in os.listdir('extensions\\' + folder):
+        for file in os.listdir(os.path.join('extensions', folder)):
             if file.endswith('.py') and file.startswith('ext_'):
                 extfile = f'extensions.{folder}.{file.split(".")[0]}'
                 ext = import_module(extfile, package=None)
@@ -579,9 +579,11 @@ def generate(window, values):
         varlist = [os.path.join(args.audio_source_folder, audio) for audio in os.listdir(args.audio_source_folder) if audio.endswith('.wav')]
 
     if not args.custom_batch_name:
-        output_folder = f"{str(args.output_path)}\\{str(args.mode)}\\{str(args.model_name)}"
+        output_folder = os.path.join(str(args.output_path), str(args.mode),
+        							 str(args.model_name))
     else:
-        output_folder = f"{str(args.output_path)}\\{str(args.mode)}\\{str(args.custom_batch_name)}"
+        output_folder = os.path.join(str(args.output_path), str(args.mode),
+        							 str(args.custom_batch_name))
         
     for i in range(int(values['batch_loop'])):
         
