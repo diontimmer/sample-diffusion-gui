@@ -24,6 +24,7 @@ from torch import optim
 from torch.nn import functional as F
 from torch.utils import data
 from tqdm import trange
+
 sys.path.append(os.getcwd())
 from dataset.dataset import SampleDataset
 from library.audio_diffusion.models import DiffusionAttnUnet1D
@@ -37,15 +38,18 @@ def get_alphas_sigmas(t):
     noise (sigma), given a timestep."""
     return torch.cos(t * math.pi / 2), torch.sin(t * math.pi / 2)
 
+
 def get_crash_schedule(t):
     sigma = torch.sin(t * math.pi / 2) ** 2
-    alpha = (1 - sigma ** 2) ** 0.5
+    alpha = (1 - sigma**2) ** 0.5
     return alpha_sigma_to_t(alpha, sigma)
+
 
 def alpha_sigma_to_t(alpha, sigma):
     """Returns a timestep, given the scaling factors for the clean image and for
     the noise."""
     return torch.atan2(sigma, alpha) / math.pi * 2
+
 
 @torch.no_grad()
 def sample(model, x, steps, eta):
@@ -61,7 +65,6 @@ def sample(model, x, steps, eta):
 
     # The sampling loop
     for i in trange(steps):
-
         # Get the model output (v, the predicted velocity)
         with torch.cuda.amp.autocast():
             v = model(x, ts * t[i]).float()
@@ -75,9 +78,12 @@ def sample(model, x, steps, eta):
         if i < steps - 1:
             # If eta > 0, adjust the scaling factor for the predicted noise
             # downward according to the amount of additional noise to add
-            ddim_sigma = eta * (sigmas[i + 1]**2 / sigmas[i]**2).sqrt() * \
-                (1 - alphas[i]**2 / alphas[i + 1]**2).sqrt()
-            adjusted_sigma = (sigmas[i + 1]**2 - ddim_sigma**2).sqrt()
+            ddim_sigma = (
+                eta
+                * (sigmas[i + 1] ** 2 / sigmas[i] ** 2).sqrt()
+                * (1 - alphas[i] ** 2 / alphas[i + 1] ** 2).sqrt()
+            )
+            adjusted_sigma = (sigmas[i + 1] ** 2 - ddim_sigma**2).sqrt()
 
             # Recombine the predicted noise and predicted denoised image in the
             # correct proportions for the next step
@@ -91,19 +97,23 @@ def sample(model, x, steps, eta):
     return pred
 
 
-
 class DiffusionUncond(pl.LightningModule):
     def __init__(self, global_args):
         super().__init__()
 
-        self.diffusion = DiffusionAttnUnet1D(global_args, io_channels=2, n_attn_layers=4)
+        self.diffusion = DiffusionAttnUnet1D(
+            global_args, io_channels=2, n_attn_layers=4
+        )
         self.diffusion_ema = deepcopy(self.diffusion)
-        self.rng = torch.quasirandom.SobolEngine(1, scramble=True, seed=global_args.seed)
+        self.rng = torch.quasirandom.SobolEngine(
+            1, scramble=True, seed=global_args.seed
+        )
         self.ema_decay = global_args.ema_decay
-        
+        self.learning_rate = global_args.learning_rate
+
     def configure_optimizers(self):
-        return optim.Adam([*self.diffusion.parameters()], lr=4e-5)
-  
+        return optim.Adam([*self.diffusion.parameters()], lr=float(self.learning_rate))
+
     def training_step(self, batch, batch_idx):
         reals = batch[0]
 
@@ -128,8 +138,8 @@ class DiffusionUncond(pl.LightningModule):
             loss = mse_loss
 
         log_dict = {
-            'train/loss': loss.detach(),
-            'train/mse_loss': mse_loss.detach(),
+            "train/loss": loss.detach(),
+            "train/mse_loss": mse_loss.detach(),
         }
 
         self.log_dict(log_dict, prog_bar=True, on_step=True)
@@ -139,9 +149,10 @@ class DiffusionUncond(pl.LightningModule):
         decay = 0.95 if self.current_epoch < 25 else self.ema_decay
         ema_update(self.diffusion, self.diffusion_ema, decay)
 
+
 class ExceptionCallback(pl.Callback):
     def on_exception(self, trainer, module, err):
-        print(f'{type(err).__name__}: {err}', file=sys.stderr)
+        print(f"{type(err).__name__}: {err}", file=sys.stderr)
 
 
 class DemoCallback(pl.Callback):
@@ -156,43 +167,43 @@ class DemoCallback(pl.Callback):
 
     @rank_zero_only
     @torch.no_grad()
-    #def on_train_epoch_end(self, trainer, module):
-    def on_train_batch_end(self, trainer, module, outputs, batch, batch_idx):        
-  
-        if (trainer.global_step - 1) % self.demo_every != 0 or self.last_demo_step == trainer.global_step:
+    # def on_train_epoch_end(self, trainer, module):
+    def on_train_batch_end(self, trainer, module, outputs, batch, batch_idx):
+        if (
+            trainer.global_step - 1
+        ) % self.demo_every != 0 or self.last_demo_step == trainer.global_step:
             return
-        
+
         self.last_demo_step = trainer.global_step
-    
+
         noise = torch.randn([self.num_demos, 2, self.demo_samples]).to(module.device)
 
         try:
             fakes = sample(module.diffusion_ema, noise, self.demo_steps, 0)
 
             # Put the demos together
-            fakes = rearrange(fakes, 'b d n -> d (b n)')
+            fakes = rearrange(fakes, "b d n -> d (b n)")
 
             log_dict = {}
-            
-            if not os.path.exists('training_demos'):
-                os.makedirs('training_demos')
-            filename = f'training_demos/demo_{trainer.global_step:08}.wav'
+
+            if not os.path.exists("training_demos"):
+                os.makedirs("training_demos")
+            filename = f"training_demos/demo_{trainer.global_step:08}.wav"
             fakes = fakes.clamp(-1, 1).mul(32767).to(torch.int16).cpu()
             torchaudio.save(filename, fakes, self.sample_rate)
 
+            log_dict[f"demo"] = wandb.Audio(
+                filename, sample_rate=self.sample_rate, caption=f"Demo"
+            )
 
-            log_dict[f'demo'] = wandb.Audio(filename,
-                                                sample_rate=self.sample_rate,
-                                                caption=f'Demo')
-        
-            log_dict[f'demo_melspec_left'] = wandb.Image(audio_spectrogram_image(fakes))
+            log_dict[f"demo_melspec_left"] = wandb.Image(audio_spectrogram_image(fakes))
 
             trainer.logger.experiment.log(log_dict, step=trainer.global_step)
         except Exception as e:
-            print(f'{type(e).__name__}: {e}', file=sys.stderr)
+            print(f"{type(e).__name__}: {e}", file=sys.stderr)
+
 
 def main():
-
     args = get_all_args()
 
     args.latent_dim = 0
@@ -200,34 +211,44 @@ def main():
     save_path = None if args.save_path == "" else args.save_path
 
     if args.max_epochs != 10000000:
-        print('Loading pre-trained to check current epoch..')
-        current_epoch = torch.load(args.ckpt_path)['epoch']
+        print("Loading pre-trained to check current epoch..")
+        current_epoch = torch.load(args.ckpt_path)["epoch"]
         args.max_epochs = current_epoch + int(args.max_epochs)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print('Using device:', device)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("Using device:", device)
     torch.manual_seed(args.seed)
 
     if args.training_zip:
-        print('Unzipping dataset..')
-        if not os.path.exists('tmp/dataset'):
-            os.makedirs('tmp/dataset')
+        print("Unzipping dataset..")
+        if not os.path.exists("tmp/dataset"):
+            os.makedirs("tmp/dataset")
         else:
-            shutil.rmtree('tmp/dataset')
-            os.makedirs('tmp/dataset')
-        with zipfile.ZipFile(args.training_zip, 'r') as zip_ref:
-            zip_ref.extractall('tmp/dataset')
-        args.training_dir = 'tmp/dataset'
-        print('Extract success!')
-
+            shutil.rmtree("tmp/dataset")
+            os.makedirs("tmp/dataset")
+        with zipfile.ZipFile(args.training_zip, "r") as zip_ref:
+            zip_ref.extractall("tmp/dataset")
+        args.training_dir = "tmp/dataset"
+        print("Extract success!")
 
     train_set = SampleDataset([args.training_dir], args)
-    train_dl = data.DataLoader(train_set, args.batch_size, shuffle=True,
-                               num_workers=args.num_workers, persistent_workers=True, pin_memory=True, drop_last=True)
-    wandb_logger = pl.loggers.WandbLogger(project=args.name, log_model='all' if args.save_wandb=='all' else None)
+    train_dl = data.DataLoader(
+        train_set,
+        args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers,
+        persistent_workers=True,
+        pin_memory=True,
+        drop_last=True,
+    )
+    wandb_logger = pl.loggers.WandbLogger(
+        project=args.name, log_model="all" if args.save_wandb == "all" else None
+    )
 
     exc_callback = ExceptionCallback()
-    ckpt_callback = pl.callbacks.ModelCheckpoint(every_n_train_steps=args.checkpoint_every, save_top_k=-1, dirpath=save_path)
+    ckpt_callback = pl.callbacks.ModelCheckpoint(
+        every_n_train_steps=args.checkpoint_every, save_top_k=-1, dirpath=save_path
+    )
     demo_callback = DemoCallback(args)
 
     diffusion_model = DiffusionUncond(args)
@@ -235,32 +256,35 @@ def main():
     wandb_logger.watch(diffusion_model)
     push_wandb_config(wandb_logger, args)
 
-    diffusion_trainer = pl.Trainer(
-        devices=args.num_gpus,
-        accelerator="gpu",
-        num_nodes = args.num_nodes,
-        strategy='ddp',
-        precision=16,
-        accumulate_grad_batches=args.accum_batches, 
-        callbacks=[ckpt_callback, demo_callback, exc_callback],
-        logger=wandb_logger,
-        log_every_n_steps=1,
-        max_epochs=args.max_epochs,
-
-    ) if args.num_gpus > 1 else pl.Trainer(
-        devices=1,
-        accelerator="gpu",
-        num_nodes = args.num_nodes,
-        precision=16,
-        accumulate_grad_batches=args.accum_batches, 
-        callbacks=[ckpt_callback, demo_callback, exc_callback],
-        logger=wandb_logger,
-        log_every_n_steps=1,
-        max_epochs=args.max_epochs,
+    diffusion_trainer = (
+        pl.Trainer(
+            devices=args.num_gpus,
+            accelerator="gpu",
+            num_nodes=args.num_nodes,
+            strategy="ddp",
+            precision=16,
+            accumulate_grad_batches=args.accum_batches,
+            callbacks=[ckpt_callback, demo_callback, exc_callback],
+            logger=wandb_logger,
+            log_every_n_steps=1,
+            max_epochs=args.max_epochs,
+        )
+        if args.num_gpus > 1
+        else pl.Trainer(
+            devices=1,
+            accelerator="gpu",
+            num_nodes=args.num_nodes,
+            precision=16,
+            accumulate_grad_batches=args.accum_batches,
+            callbacks=[ckpt_callback, demo_callback, exc_callback],
+            logger=wandb_logger,
+            log_every_n_steps=1,
+            max_epochs=args.max_epochs,
+        )
     )
 
     diffusion_trainer.fit(diffusion_model, train_dl, ckpt_path=args.ckpt_path)
 
-if __name__ == '__main__':
-    main()
 
+if __name__ == "__main__":
+    main()
